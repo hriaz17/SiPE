@@ -4,94 +4,575 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SiPE: Syntax-Informed Positional Embeddings for Transformers</title>
-<meta name="description" content="SiPE learns a lightweight syntactic prior from dependency parses and injects it into the positional pathway of Transformers, establishing a new Pareto frontier between syntactic supervision and inference cost.">
+<meta name="description" content="Positional embeddings tell a Transformer where tokens are, not how they relate. SiPE injects a seven-tag syntactic prior into the positional pathway — improving SyntaxGym, perplexity, and GLUE at the cost of a single parse.">
 <meta property="og:title" content="Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers">
 <meta property="og:description" content="A single-parse syntactic prior for the positional pathway: +10.3% SyntaxGym, −9.0% perplexity, +8.2% GLUE.">
 <meta property="og:image" content="assets/teaser.png">
 <style>
-  :root { --orange:#B45F06; --green:#2E7D32; --ink:#1F2937; --muted:#6B7280; }
+  :root { --orange:#B45F06; --green:#2E7D32; --blue:#4059AD; --gray:#6B7280;
+          --ink:#1F2937; --muted:#6B7280; --rule:#E5E7EB; --bg:#FDFDFC; --card:#F6F5F2; }
   * { box-sizing: border-box; }
-  body { font-family: Georgia, 'Times New Roman', serif; color: var(--ink);
-         max-width: 780px; margin: 0 auto; padding: 2.2rem 1.2rem 4rem; line-height: 1.6; }
-  .logo { display:block; margin: 0 auto 0.8rem; width: 110px; }
-  h1 { text-align:center; font-size: 1.75rem; line-height: 1.3; margin: 0.2rem 0 1rem; }
-  .authors, .affil { text-align:center; margin: 0.15rem 0; }
-  .authors a { color: var(--ink); }
-  .affil { color: var(--muted); font-style: italic; font-size: 0.95rem; }
-  .links { text-align:center; margin: 1.3rem 0 1.8rem; }
-  .links a { display:inline-block; margin: 0 0.4rem; padding: 0.45rem 1.1rem;
-             border-radius: 2rem; text-decoration: none; font-family: Helvetica, Arial, sans-serif;
-             font-size: 0.9rem; font-weight: 600; }
-  .btn-dark   { background: var(--ink);    color: #fff; }
-  .btn-orange { background: var(--orange); color: #fff; }
-  .btn-green  { background: var(--green);  color: #fff; }
-  .teaser { display:block; margin: 1.5rem auto; width: min(480px, 92%); }
-  .teasercap { text-align:center; color: var(--muted); font-size: 0.85rem; width: min(560px, 95%); margin: 0 auto 1.5rem; }
-  h2 { font-size: 1.2rem; border-bottom: 1px solid #E5E7EB; padding-bottom: 0.25rem; margin-top: 2.2rem; }
-  .note { background: #FFF7ED; border-left: 4px solid var(--orange); padding: 0.7rem 1rem; border-radius: 0 6px 6px 0; }
-  pre { background: #F3F4F6; padding: 1rem; border-radius: 8px; overflow-x: auto;
-        font-size: 0.8rem; line-height: 1.45; }
-  footer { margin-top: 3rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+  html { scroll-behavior: smooth; }
+  body { font-family: Charter, Georgia, 'Times New Roman', serif; color: var(--ink);
+         background: var(--bg); margin: 0; line-height: 1.65; font-size: 1.06rem; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+  .logo { display: block; margin: 0 auto 1.2rem; width: 190px; }
+  h1 { text-align: center; font-size: 2rem; line-height: 1.25; margin: 0.4rem 0 0.9rem; font-weight: 700; }
+  .byline { text-align: center; color: var(--muted); font-size: 0.95rem; margin: 0.15rem 0; }
+  .byline a { color: var(--ink); }
+  .links { text-align: center; margin: 1.4rem 0 0.6rem; }
+  .links a { display: inline-block; margin: 0.2rem 0.35rem; padding: 0.42rem 1.05rem;
+             border-radius: 2rem; text-decoration: none;
+             font-family: -apple-system, Helvetica, Arial, sans-serif;
+             font-size: 0.86rem; font-weight: 600; }
+  .btn-dark   { background: var(--ink);   color: #fff; }
+  .btn-orange { background: var(--orange);color: #fff; }
+  .btn-green  { background: var(--green); color: #fff; }
+  hr { border: none; border-top: 1px solid var(--rule); margin: 2.6rem 0; }
+  h2 { font-size: 1.42rem; margin: 2.6rem 0 0.8rem; line-height: 1.3; }
+  h3 { font-size: 1.12rem; margin: 1.8rem 0 0.5rem; }
+  p { margin: 0.9rem 0; }
+  a { color: var(--blue); }
+  figure { margin: 1.8rem 0; }
+  figure img { width: 100%; border-radius: 8px; border: 1px solid var(--rule); background:#fff; }
+  figure.narrow img { width: min(480px, 100%); display: block; margin: 0 auto; }
+  figcaption { color: var(--muted); font-size: 0.86rem; line-height: 1.5; margin-top: 0.55rem; }
+  .eq { text-align: center; font-size: 1.08rem; margin: 1.3rem 0; font-style: italic; }
+  .eq b { font-style: normal; }
+  code, .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.88em;
+         background: var(--card); padding: 0.08em 0.35em; border-radius: 4px; }
+  pre { background: var(--card); border: 1px solid var(--rule); padding: 1rem 1.2rem; border-radius: 8px;
+        overflow-x: auto; font-size: 0.8rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid var(--orange); margin: 1.2rem 0; padding: 0.2rem 0 0.2rem 1.1rem;
+               color: var(--muted); font-style: italic; }
+  .note { background: #FFF7ED; border-left: 4px solid var(--orange); padding: 0.7rem 1rem;
+          border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+  .widget { background: #fff; border: 1px solid var(--rule); border-radius: 10px;
+            padding: 1.1rem 1.2rem 1.3rem; margin: 1.8rem 0;
+            font-family: -apple-system, Helvetica, Arial, sans-serif; }
+  .widget .wcap { color: var(--muted); font-size: 0.82rem; margin-top: 0.7rem; line-height: 1.5;
+                  font-family: Charter, Georgia, serif; }
+  .pathbtns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+  .pathbtns button { border: 1.5px solid var(--rule); background: #fff; border-radius: 2rem;
+                     padding: 0.32rem 0.85rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+                     color: var(--ink); }
+  .pathbtns button.active { color: #fff; border-color: transparent; }
+  #detailcard { background: var(--card); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.86rem;
+                line-height: 1.55; min-height: 5.2em; }
+  #detailcard .deq { font-family: Charter, Georgia, serif; font-style: italic; font-size: 1rem; margin: 0.25rem 0; }
+  #detailcard .verdict { font-weight: 700; }
+  .sliderrow { display: flex; align-items: center; gap: 0.7rem; margin: 0.45rem 0; font-size: 0.85rem; }
+  .sliderrow label { width: 15em; }
+  .sliderrow input { flex: 1; }
+  .sliderrow .val { width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bars { margin-top: 0.8rem; }
+  .barrow { display: flex; align-items: center; gap: 0.6rem; margin: 0.35rem 0; font-size: 0.8rem; }
+  .barrow .blabel { width: 16em; }
+  .bartrack { flex: 1; height: 16px; background: var(--card); border-radius: 4px; position: relative; }
+  .barfill { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+  .barrow .bval { width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  #gatemsg { margin-top: 0.7rem; font-size: 0.85rem; color: var(--muted); font-family: Charter, Georgia, serif;
+             font-style: italic; min-height: 2.6em; }
+  .sent { text-align: center; margin: 0.6rem 0 0.2rem; }
+  .sent span.w { display: inline-block; margin: 0 0.45rem; padding: 0.25rem 0.55rem; border-radius: 6px;
+                 font-size: 1.05rem; cursor: pointer; border: 1.5px solid transparent; font-family: Charter, Georgia, serif; }
+  .sent span.w:hover, .sent span.w.hl { border-color: var(--orange); background: #FFF7ED; }
+  #arcinfo { text-align: center; font-size: 0.86rem; color: var(--muted); min-height: 3.2em; margin-top: 0.5rem;
+             font-family: Charter, Georgia, serif; }
+  #arcinfo b { color: var(--orange); }
+  footer { margin-top: 3.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+  .toc { background: var(--card); border-radius: 10px; padding: 1rem 1.4rem; font-size: 0.92rem; }
+  .toc a { text-decoration: none; }
+  svg text { font-family: -apple-system, Helvetica, Arial, sans-serif; }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<img class="logo" src="assets/logo.png" alt="SiPE logo">
+<img class="logo" src="assets/logo.png" alt="SiPE wordmark">
 <h1>Beyond Sequence Order:<br>Syntax-Informed Positional Embeddings for Transformers</h1>
-
-<p class="authors">
-  <a href="https://hriaz17.github.io/">Haris Riaz</a> &nbsp;·&nbsp;
-  Hyungji Kim &nbsp;·&nbsp;
-  <a href="https://surdeanu.cs.arizona.edu/mihai/">Mihai Surdeanu</a>
-</p>
-<p class="affil">Department of Computer Science, University of Arizona</p>
+<p class="byline"><a href="https://hriaz17.github.io/">Haris Riaz</a> · Hyungji Kim · <a href="https://surdeanu.cs.arizona.edu/mihai/">Mihai Surdeanu</a></p>
+<p class="byline">Department of Computer Science, University of Arizona</p>
+<p class="byline">August 2026</p>
 
 <div class="links">
-  <a class="btn-dark"   href="https://github.com/hriaz17/SiPE">&lt;/&gt; Code</a>
-  <!-- TODO: point this at the arXiv abs page once the paper is up -->
+  <a class="btn-dark" href="https://github.com/hriaz17/SiPE">&lt;/&gt; Code</a>
+  <!-- TODO: point at the arXiv abs page once the paper is up -->
   <a class="btn-orange" href="#citation">&#128214; Paper (arXiv soon)</a>
-  <a class="btn-green"  href="#citation">&#128221; BibTeX</a>
+  <a class="btn-green" href="#citation">&#128221; BibTeX</a>
 </div>
 
-<img class="teaser" src="assets/teaser.png" alt="SiPE Pareto frontier">
-<p class="teasercap"><b>SiPE moves the Pareto frontier between syntactic supervision and inference
-cost:</b> conditioning on a single parse, it retains most of the SyntaxGym benefit of
-beam marginalization (≈300 parses) at 1/300th of the inference cost, while clearly
-outperforming parser-free methods.</p>
+<hr>
 
-<h2>Abstract</h2>
-<p>Positional embeddings (PE) in Transformers encode token distance and order but are largely
-agnostic to <em>syntactic structure</em>. We introduce <b>S</b>yntax-<b>i</b>nformed
-<b>P</b>ositional <b>E</b>mbeddings (<b>SiPE</b>), which learns a lightweight syntactic prior
-from dependency parses during pretraining and injects it across all three dominant PE families
-(absolute, relative, rotary), for both encoders and decoders, leaving self-attention and the
-rest of the architecture untouched. We isolate <em>where</em> and <em>how</em> the prior should
-enter the model, and find it depends on the architecture: for autoregressive decoders that use
-relative PE, the prior is strongest when coupled multiplicatively with the relative-position
-term of the attention score, outperforming injection into the input embeddings, into
-self-attention, or into the positional and attention terms jointly &mdash; while for encoders it
-is best added directly to the input embeddings, composing with each encoder's native positional
-mechanism. We find that models pre-trained with SiPE improve on the SyntaxGym benchmark by up to
-10.3% while simultaneously reducing perplexity by 9.0% over a base model with no syntactic
-supervision &mdash; a metric nearly every existing syntax-injection method instead degrades.
-Crucially, these gains extend beyond syntactic generalization: SiPE also improves real-world
-language understanding, raising scores on the GLUE benchmark by up to 8.2% over a model trained
-without it. Unlike existing syntactic language models that marginalize over many parses at
-inference or discard syntax at runtime, SiPE conditions on a single parse, establishing a new
-Pareto frontier between syntactic supervision and inference cost.</p>
+<p>Positional embeddings tell a Transformer <em>where</em> its tokens are. They say nothing about
+how those tokens <em>relate</em>. In <i>“Please move this large file to another folder,”</i> the verb
+<i>move</i> is bound to <i>file</i> (what to move) and <i>folder</i> (where) by syntactic dependencies
+that positional machinery cannot see — <i>folder</i> is six words away from its verb, and every
+positional scheme in use today only measures that distance, not the <code>oblique</code> arc that
+connects them.</p>
 
-<h2>Code &amp; Artifacts</h2>
-<p class="note">🚧 Code, hexatagged training data, and pretrained checkpoints will be released
-upon acceptance. Watch the <a href="https://github.com/hriaz17/SiPE">GitHub repository</a> for updates.</p>
+<p>Our paper asks a narrow question with a surprisingly reusable answer: <b>if you have a cheap
+syntactic signal, where exactly should it enter the Transformer?</b> We inject a seven-value tag
+prior — derived from a single dependency parse — into models spanning all three dominant
+positional-encoding families (absolute, relative, rotary), for both encoders and decoders, and
+sweep the injection site. The best recipe turns out to depend on the architecture, and the
+strongest variant doesn’t <em>add</em> syntax to the attention score at all: it <em>rescales</em>
+the position term by how well the query aligns with the key’s syntactic tag.</p>
+
+<p>The headline numbers, all relative to a matched baseline with no syntactic supervision:
+<b>+10.3%</b> SyntaxGym, <b>−9.0%</b> perplexity (a metric nearly every prior syntax-injection
+method makes <em>worse</em>), and <b>+8.2%</b> on GLUE — while conditioning on <b>one</b> parse
+at inference instead of marginalizing over ~300.</p>
+
+<figure>
+  <img src="assets/teaser.png" alt="Pareto frontier: SyntaxGym score vs parse trees evaluated at inference">
+  <figcaption><b>SiPE moves the Pareto frontier between syntactic supervision and inference
+  cost.</b> Joint syntactic LMs (TG, Pushdown LM, PLM) marginalize over ≈300 candidate parses to
+  recover <i>p(x)</i>; parser-free methods (TreeReg, TPT) discard syntax at inference and lose
+  much of its benefit. SiPE conditions on a single parse — most of the benefit at 1/300th of the
+  cost.</figcaption>
+</figure>
+
+<div class="toc">
+  <b>Contents</b><br>
+  <a href="#position">1. How position enters attention (and why Inkling matters)</a><br>
+  <a href="#hexatags">2. Seven tags of syntax</a><br>
+  <a href="#where">3. Where should syntax enter? (interactive)</a><br>
+  <a href="#gate">4. Gate, don’t add (interactive)</a><br>
+  <a href="#results">5. Results</a><br>
+  <a href="#layers">6. Syntax wants to enter at layer one</a><br>
+  <a href="#attention">7. What the model does with it</a><br>
+  <a href="#discussion">8. Relative PE is back — good timing</a><br>
+  <a href="#limitations">9. Limitations and what’s next</a><br>
+  <a href="#citation">Citation</a>
+</div>
+
+<h2 id="position">1. How position enters attention (and why Inkling matters)</h2>
+
+<p>Strip a Transformer-XL attention logit down and it splits into two bilinear pieces:</p>
+
+<div class="eq"><b>A</b><sub>ij</sub> = <b>AC</b><sub>ij</sub> + <b>BD</b><sub>ij</sub></div>
+
+<p>The <b>AC</b> term asks “how much does my content match yours?” — the ordinary query·key
+product. The <b>BD</b> term asks “how much do I care about your <em>offset</em>?”:</p>
+
+<div class="eq"><b>BD</b><sub>ij</sub> = ⟨q<sub>i</sub> + v, &nbsp;W<sub>R</sub>&thinsp;r<sub>i−j</sub>⟩</div>
+
+<p>— the query taking an inner product with a learned embedding of the relative distance
+<i>i−j</i>. This is the “coefficients trick” lineage that runs from
+<a href="https://arxiv.org/abs/1803.02155">Shaw et al. (2018)</a> and the
+<a href="https://arxiv.org/abs/1809.04281">Music Transformer</a> through Transformer-XL and
+DeBERTa: relative position is not a fixed bias but a <b>content-conditioned</b> score — each
+query gets to weigh each offset differently.</p>
+
+<p>For a few years RoPE largely displaced this family in frontier decoders. Then, concurrent with
+our work, Thinking Machines Lab released
+<a href="https://thinkingmachines.ai/news/introducing-inkling/">Inkling</a> — a 975B-parameter
+(41B active) open-weights MoE with a 1M-token context — and its positional choice is the
+interesting part:</p>
+
+<blockquote>“We find that encoding position with a relative positional embedding performs better
+and extrapolates better to longer sequences than the more widely adopted Rotary Positional
+Embedding (RoPE).”</blockquote>
+
+<p>And it’s not the static per-distance bias of T5. In
+<a href="https://github.com/huggingface/transformers/blob/28596623762cb409bb1c9234f04bfb1269b1ece1/src/transformers/models/inkling/modular_inkling.py#L278-L279">Inkling’s
+implementation</a>, each token’s hidden state is projected into a small vector whose inner
+product with a learned per-offset embedding is added to the attention logits — a content ×
+position interaction of exactly the <b>BD</b> form above. A frontier lab independently concluded
+that the coefficients trick is worth a trillion-parameter bet, and
+<a href="https://x.com/nrehiew_/status/2077542402399809827">much of the community met relative PE
+for the first time that day</a>.</p>
+
+<p>Our paper lives one step further down this road. If the position pathway is already a learned,
+content-conditioned channel — why should it only know about <em>distance</em>?</p>
+
+<h2 id="hexatags">2. Seven tags of syntax</h2>
+
+<p>We derive our prior from <b>hexatagging</b>, a linearization that converts a dependency parse
+into a sequence of per-word tags. Each word gets two: a <b>terminal tag</b>
+τ ∈ {2 values} that is essentially a directional indicator relating the word to its syntactic
+governor, and a <b>non-terminal tag</b> ν ∈ {5 values} from the word’s position in the binarized
+head tree. Two lookup tables — <b>E</b><sup>τ</sup> (2×D) and <b>E</b><sup>ν</sup> (5×D), about
+7·D parameters total, well under 0.01% of the model — turn the tags into vectors. Hover the
+sentence to see the raw material:</p>
+
+<div class="widget">
+  <svg id="arcsvg" viewBox="0 0 640 120" width="100%" aria-hidden="true">
+    <defs><marker id="arrowO" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="#B45F06"/></marker></defs>
+    <g id="arcs" fill="none" stroke="#C9CDD3" stroke-width="2">
+      <path id="arc0" d="M 110 95 C 110 40, 250 40, 250 92"/>
+      <path id="arc2" d="M 400 95 C 400 55, 505 55, 505 92"/>
+      <path id="arc3" d="M 510 95 C 510 25, 265 25, 262 92"/>
+    </g>
+    <g font-size="21" fill="#1F2937" text-anchor="middle" font-family="Georgia, serif">
+      <text id="w0" x="110" y="112" style="cursor:pointer">she</text>
+      <text id="w1" x="255" y="112" style="cursor:pointer">watches</text>
+      <text id="w2" x="400" y="112" style="cursor:pointer">funny</text>
+      <text id="w3" x="510" y="112" style="cursor:pointer">videos</text>
+    </g>
+  </svg>
+  <div id="arcinfo">Hover a word.</div>
+  <div class="wcap">The running example from the paper (“she watches funny videos”). The terminal
+  tag encodes each word’s relation to its governor; the non-terminal tag comes from the binary
+  head tree. Only a word’s <em>first subword</em> carries its tags.</div>
+</div>
+
+<p>Two details matter. The tags attach only to each word’s <b>first subword</b>, so a word
+contributes one tag signal no matter how the tokenizer shreds it. And the tag tables are trained
+with an <b>auxiliary tag-prediction loss</b> alongside the LM objective — masked positions have
+their tag inputs withheld, so the model must <em>infer</em> syntax from context, not copy it.</p>
+
+<figure>
+  <img src="assets/method_diagram.png" alt="SiPE method diagram: hexatags from dependency arcs, injected via lookup tables">
+  <figcaption><b>Left:</b> dependency arcs → binary head tree → hexatags. <b>Right:</b>
+  input-pathway injection for absolute PE: each first subword adds one row from each tag table to
+  its embedding; three prediction heads recover the token and both tags at masked
+  positions.</figcaption>
+</figure>
+
+<h2 id="where">3. Where should syntax enter?</h2>
+
+<p>Here is the design space in one picture. A Transformer layer’s attention score has a content
+term and a position term; the input embedding feeds both. The hexatag prior can enter at three
+places — click each pathway:</p>
+
+<div class="widget">
+  <div class="pathbtns" id="pathbtns">
+    <button data-p="input" style="--c:#2E7D32">Input pathway</button>
+    <button data-p="pos" style="--c:#B45F06">Positional pathway (×)</button>
+    <button data-p="dis" style="--c:#4059AD">Disentangled (+)</button>
+    <button data-p="attn" style="--c:#6B7280">Attention bias</button>
+  </div>
+  <svg id="pathsvg" viewBox="0 0 640 360" width="100%">
+    <defs>
+      <marker id="mG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#2E7D32"/></marker>
+      <marker id="mO" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#B45F06"/></marker>
+      <marker id="mB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#4059AD"/></marker>
+      <marker id="mGr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#6B7280"/></marker>
+      <marker id="mK" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#9CA3AF"/></marker>
+    </defs>
+    <!-- self-attention box -->
+    <rect x="255" y="60" width="360" height="180" rx="12" fill="none" stroke="#C9CDD3" stroke-dasharray="5 4"/>
+    <text x="435" y="82" text-anchor="middle" font-size="12.5" fill="#6B7280" letter-spacing="1">SELF-ATTENTION, ANY LAYER</text>
+    <rect x="280" y="98" width="140" height="46" rx="9" fill="#374151"/>
+    <text x="350" y="117" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="700">Content term</text>
+    <text x="350" y="134" text-anchor="middle" font-size="11" fill="#D1D5DB">query · key</text>
+    <rect x="450" y="98" width="140" height="46" rx="9" fill="#7C3A0B"/>
+    <text x="520" y="117" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="700">Position term</text>
+    <text x="520" y="134" text-anchor="middle" font-size="11" fill="#F3E0CE">offset score (BD)</text>
+    <!-- attention scores strip: content + position converge here -->
+    <rect x="345" y="182" width="180" height="36" rx="9" fill="#EDEBE6"/>
+    <text x="435" y="204" text-anchor="middle" font-size="12.5" fill="#1F2937" font-weight="700">attention scores</text>
+    <path d="M350 144 L420 182" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mK)" fill="none"/>
+    <path d="M520 144 L455 182" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mK)" fill="none"/>
+    <!-- multiply node on position term -->
+    <circle id="nodeX" cx="520" cy="163" r="12" fill="#fff" stroke="#B45F06" stroke-width="1.8"/>
+    <text x="520" y="168" text-anchor="middle" font-size="13" fill="#B45F06">×</text>
+    <!-- plus node on attention scores (bias) -->
+    <circle id="nodePlusA" cx="345" cy="200" r="12" fill="#fff" stroke="#6B7280" stroke-width="1.8"/>
+    <text x="345" y="205" text-anchor="middle" font-size="13" fill="#6B7280">+</text>
+    <!-- disentangled plus node on attention scores (right side) -->
+    <circle id="nodePlusD" cx="525" cy="200" r="12" fill="#fff" stroke="#4059AD" stroke-width="1.8"/>
+    <text x="525" y="205" text-anchor="middle" font-size="13" fill="#4059AD">+</text>
+    <!-- token embedding + input plus -->
+    <rect x="355" y="300" width="160" height="40" rx="9" fill="#374151"/>
+    <text x="435" y="325" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="700">Token embedding</text>
+    <circle id="nodePlusI" cx="435" cy="270" r="12" fill="#fff" stroke="#2E7D32" stroke-width="1.8"/>
+    <text x="435" y="275" text-anchor="middle" font-size="13" fill="#2E7D32">+</text>
+    <path d="M435 300 L435 284" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mK)" fill="none"/>
+    <path d="M435 258 L435 242" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mK)" fill="none"/>
+    <!-- layer output -->
+    <rect x="360" y="8" width="150" height="34" rx="9" fill="#374151"/>
+    <text x="435" y="30" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="700">Layer output</text>
+    <path d="M435 60 L435 44" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mK)" fill="none"/>
+    <!-- hexatag prior -->
+    <rect x="18" y="170" width="170" height="56" rx="10" fill="#1E4D38"/>
+    <text x="103" y="193" text-anchor="middle" font-size="14" fill="#fff" font-weight="700">Hexatag prior</text>
+    <text x="103" y="211" text-anchor="middle" font-size="11" fill="#BFE3CF">E&#964; + E&#957;, 7·D params</text>
+    <!-- pathway arrows -->
+    <path id="pInput" d="M188 214 C 280 268, 350 270, 421 270" stroke="#2E7D32" stroke-width="2.2"
+          stroke-dasharray="6 5" fill="none" marker-end="url(#mG)"/>
+    <path id="pPos" d="M188 192 C 330 150, 430 163, 506 163" stroke="#B45F06" stroke-width="2.2"
+          stroke-dasharray="6 5" fill="none" marker-end="url(#mO)"/>
+    <path id="pDis" d="M188 206 C 330 232, 430 216, 511 202" stroke="#4059AD" stroke-width="2.2"
+          stroke-dasharray="6 5" fill="none" marker-end="url(#mB)"/>
+    <path id="pAttn" d="M188 199 C 260 210, 300 205, 331 200" stroke="#6B7280" stroke-width="2.2"
+          stroke-dasharray="6 5" fill="none" marker-end="url(#mGr)"/>
+  </svg>
+  <div id="detailcard">Click a pathway above to see its equation and how it performs on
+  Transformer-XL.</div>
+  <div class="wcap">The four injection sites we study for a relative-PE decoder. Every arrow ends
+  somewhere concrete: the input pathway adds to the token embedding, the positional pathway
+  multiplies the position term, and both the disentangled term and the Shaw-style attention bias
+  add directly to the attention scores.</div>
+</div>
+
+<p>Sweeping this space produces a clean ordering — and it isn’t the same for encoders and
+decoders:</p>
+
+<p><b>Encoders (RoBERTa, DeBERTa-v3, ModernBERT):</b> just add the tag vectors to the input
+embedding. The prior composes with whatever positional scheme the encoder already uses —
+absolute, relative, or rotary — and this simple recipe beats fancier ones downstream.</p>
+
+<p><b>Decoders with relative PE (Transformer-XL):</b> the input pathway is the <em>weakest</em>
+option. Syntax helps progressively more as it entangles with position:
+input-side &lt; disentangled additive &lt; multiplicative coupling.</p>
+
+<h2 id="gate">4. Gate, don’t add</h2>
+
+<p>The winning decoder variant deserves its own section. We first form a syntactic analogue of
+the <b>BD</b> term — the same effective query, dotted against a projection of the key’s tag
+instead of an offset embedding:</p>
+
+<div class="eq">c<sub>ij</sub> = ⟨q<sub>i</sub> + v, &nbsp;W<sub>E</sub>(E<sup>τ</sup><sub>j</sub> + E<sup>ν</sup><sub>j</sub>)⟩ / √d</div>
+
+<p>One query, two questions: “how well do I align with this <em>offset</em>?” (<b>BD</b>) and
+“how well do I align with this <em>tag</em>?” (<i>c</i>). Then, instead of adding <i>c</i> to the
+score, we let it <em>rescale</em> the position term:</p>
+
+<div class="eq"><b>Ã</b><sub>ij</sub> = <b>AC</b><sub>ij</sub> + (1 + c<sub>ij</sub>) · <b>BD</b><sub>ij</sub></div>
+
+<p>Drag the sliders to see why this behaves differently from the additive version:</p>
+
+<div class="widget">
+  <div class="sliderrow"><label>|BD|: query–offset alignment</label>
+    <input type="range" id="sBD" min="0" max="3" step="0.05" value="1.6"><span class="val" id="vBD">1.60</span></div>
+  <div class="sliderrow"><label>c: query–tag alignment</label>
+    <input type="range" id="sC" min="-1" max="1" step="0.05" value="0.5"><span class="val" id="vC">0.50</span></div>
+  <div class="bars">
+    <div class="barrow"><span class="blabel">additive syntax term (+ c)</span>
+      <div class="bartrack"><div class="barfill" id="bAdd" style="background:#4059AD"></div></div>
+      <span class="bval" id="tAdd"></span></div>
+    <div class="barrow"><span class="blabel">multiplicative correction (c · BD)</span>
+      <div class="bartrack"><div class="barfill" id="bMul" style="background:#B45F06"></div></div>
+      <span class="bval" id="tMul"></span></div>
+  </div>
+  <div id="gatemsg"></div>
+  <div class="wcap">The additive term injects the same syntactic push everywhere. The
+  multiplicative correction scales with the positional preference the model has <em>already</em>
+  formed — large where the query attends to the offset, silent where it doesn’t. With
+  W<sub>E</sub> initialized near zero, c ≈ 0 and the model starts as an exact vanilla
+  Transformer-XL.</div>
+</div>
+
+<p>Empirically this ordering is robust: the multiplicative form reaches <b>SyntaxGym 80.60</b>
+(vs. 73.09 baseline) while <em>cutting</em> perplexity 18.63 → 16.95; the disentangled additive
+form lands at 78.72; input-side injection at 76.97. Syntax helps most when it sharpens an
+existing positional preference rather than shouting over it.</p>
+
+<h2 id="results">5. Results</h2>
+
+<p>Three claims, each with a figure.</p>
+
+<p><b>First, the prior transfers downstream.</b> On the decoder, fine-tuning the SiPE-pretrained
+Transformer-XL on GLUE lifts the macro average from 68.17 to 73.78 — <b>+8.2% relative</b>, with
+every individual task improving. On encoders the gains are smaller but consistent across all
+three PE families: RoBERTa +0.75%, DeBERTa-v3 +0.59%, ModernBERT +1.0% relative on the macro
+average, at both base and large scales.</p>
+
+<p><b>Second, simplest fusion wins.</b> Across an architecture sweep on RoBERTa — concatenation,
+learned interpolation, residual-stream injection, full 40-label dependency-relation embeddings —
+plain addition of the two coarse tags (<b>ADD T+NT</b>) attains the best macro-average. The
+richer <code>deprel</code> signal never closes the gap:</p>
+
+<figure>
+  <img src="assets/glue_avg.png" alt="Average GLUE across prior-injection variants">
+  <figcaption>Average GLUE across injection variants for RoBERTa-base, as improvement over the
+  no-prior baseline (68.64). Every syntactic variant helps; the simplest — adding terminal +
+  non-terminal tags — helps most (70.19).</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/glue_per_dataset.png" alt="Per-dataset GLUE across prior-injection variants">
+  <figcaption>The per-task breakdown reshuffles between datasets, but ADD T+NT holds the best
+  macro-average — the empirical basis for leaving dependency labels out of the main
+  method.</figcaption>
+</figure>
+
+<p><b>Third, the language-modeling tax is negative.</b> Most syntax-injection methods pay for
+their syntactic gains with worse perplexity (TreeReg: 22.30; TPT variants: 45–48, against our
+baseline’s 18.63). SiPE’s multiplicative variant <em>improves</em> perplexity to 16.95 while
+matching or beating the parser-free methods on syntactic generalization — see the Pareto figure
+at the top of this post.</p>
+
+<h2 id="layers">6. Syntax wants to enter at layer one</h2>
+
+<p>A natural follow-up: which layers should receive the prior? We sweep contiguous layer suffixes
+of Transformer-XL — injecting into layers ℓ…16 for every ℓ — and injecting from the very first
+layer wins:</p>
+
+<figure>
+  <img src="assets/layerwise.png" alt="Layerwise injection sweep">
+  <figcaption>Layerwise sweep on Transformer-XL: performance as injection starts later in the
+  stack. Syntax is most useful from layer 1 onward; delaying it forfeits the gain — consistent
+  with classic probing results that syntactic information concentrates early.</figcaption>
+</figure>
+
+<h2 id="attention">7. What the model does with it</h2>
+
+<p>Does the prior actually change attention, or just nudge logits? We looked at BLiMP
+<i>causative</i> minimal pairs where the SiPE model is right and the baseline is wrong, and
+measured verb→object attention:</p>
+
+<figure>
+  <img src="assets/attn_roberta.png" alt="RoBERTa verb-object attention comparison">
+  <figcaption>RoBERTa-base vs. RoBERTa-base+SiPE: on examples only the SiPE model classifies
+  correctly, it places higher verb→object attention in <b>90%</b> of cases. ModernBERT mirrors
+  the pattern at 85% despite rotary PE.</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/attn_txl.png" alt="Transformer-XL verb-object attention comparison">
+  <figcaption>The decoder shows the same direction but a weaker majority (55% averaged over all
+  16 layers) — position-pathway injection appears to express syntax less through raw attention
+  mass redistribution than input-pathway injection does.</figcaption>
+</figure>
+
+<h2 id="discussion">8. Relative PE is back — good timing</h2>
+
+<p>We built SiPE’s decoder story on Transformer-XL rather than a RoPE-era LLM architecture, and
+for most of the project that looked like a retro choice. Inkling makes it look prescient:
+a frontier lab just shipped a 975B-parameter model that drops RoPE for the Shaw-lineage relative
+PE, for exactly the reasons that made it a good injection target — the position pathway is a
+learned, content-conditioned score you can shape.</p>
+
+<p>The correspondence is precise enough to spell out:</p>
+
+<ul>
+<li><b>Inkling ≈ our disentangled variant.</b> Inkling adds ⟨projected hidden state, per-offset
+embedding⟩ to the logits; our disentangled variant adds ⟨query, projected <em>tag</em>⟩ alongside
+<b>BD</b>. Same additive slot — the difference is what conditions the bias: a latent projection
+there, an explicit, parser-supplied, supervised syntactic tag here.</li>
+<li><b>Our strongest variant goes one step further.</b> Nothing in the Inkling recipe
+<em>gates</em>: its relative bias is strictly additive. Our best decoder result comes from
+multiplying the position term by the tag alignment — and additive vs. multiplicative is worth
+about two SyntaxGym points in our ablations. If the coefficients trick is coming back at
+frontier scale, the gate seems worth trying too.</li>
+</ul>
+
+<p>Either way, the larger point stands on its own: the positional pathway is not a solved,
+frozen part of the architecture. It is a learned channel, it responds to content, and — as our
+results show — it responds to <em>structure</em>.</p>
+
+<h2 id="limitations">9. Limitations and what’s next</h2>
+
+<p>The biggest open problem is <b>fast autoregressive generation</b>. SiPE conditions on
+hexatags, and generating a new token in principle requires re-tagging the sequence so far; the
+parser is fast, but tags of earlier tokens can be revised as the sentence grows, which
+invalidates cached keys and values. Efficient incremental decoding under a per-step syntactic
+prior is the direction we care most about next. Our experiments are also bounded by an academic
+compute budget — small models, English, WikiText/BLLIP-scale pretraining — and our reported
+perplexity is conditioned on the single parse (that is the trade the Pareto figure makes
+explicit).</p>
+
+<p class="note">🚧 <b>Code, hexatagged training data, and pretrained checkpoints will be released
+upon acceptance</b> — enough, we hope, for someone with more GPUs than us to try the gate at
+Inkling scale. Watch <a href="https://github.com/hriaz17/SiPE">hriaz17/SiPE</a>.</p>
 
 <h2 id="citation">Citation</h2>
-<pre>@misc{riaz2026sipe,
+
+<p>Please cite this work as:</p>
+
+<pre><code>@misc{riaz2026sipe,
   title  = {Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers},
   author = {Riaz, Haris and Kim, Hyungji and Surdeanu, Mihai},
   year   = {2026},
   note   = {Under review}
-}</pre>
+}</code></pre>
 
-<footer>© 2026 · <a href="https://github.com/hriaz17/SiPE">hriaz17/SiPE</a></footer>
+<footer>© 2026 · <a href="https://github.com/hriaz17/SiPE">hriaz17/SiPE</a> ·
+<a href="https://hriaz17.github.io/SiPE/">hriaz17.github.io/SiPE</a></footer>
+</div>
+
+<script>
+// ---------- Widget 1: dependency-arc hover ----------
+(function () {
+  var info = document.getElementById('arcinfo');
+  var data = {
+    w0: {arc: 'arc0', msg: '<b>she</b> → governor <b>watches</b> (to the <b>right</b>). ' +
+         'The terminal tag τ records this head direction; ν comes from the binary head tree.'},
+    w1: {arc: null, msg: '<b>watches</b> is the <b>root</b> — every other word ultimately hangs off it.'},
+    w2: {arc: 'arc2', msg: '<b>funny</b> → governor <b>videos</b> (to the <b>right</b>): an adjective waiting for its noun.'},
+    w3: {arc: 'arc3', msg: '<b>videos</b> → governor <b>watches</b> (to the <b>left</b>): the object of the verb, two words away.'}
+  };
+  Object.keys(data).forEach(function (id) {
+    var el = document.getElementById(id);
+    el.addEventListener('mouseenter', function () {
+      info.innerHTML = data[id].msg;
+      ['arc0','arc2','arc3'].forEach(function (a) {
+        var p = document.getElementById(a);
+        var on = (data[id].arc === a);
+        p.setAttribute('stroke', on ? '#B45F06' : '#C9CDD3');
+        p.setAttribute('stroke-width', on ? 2.8 : 2);
+        if (on) p.setAttribute('marker-end', 'url(#arrowO)'); else p.removeAttribute('marker-end');
+      });
+    });
+  });
+})();
+
+// ---------- Widget 2: pathway explorer ----------
+(function () {
+  var card = document.getElementById('detailcard');
+  var paths = { input: 'pInput', pos: 'pPos', dis: 'pDis', attn: 'pAttn' };
+  var colors = { input: '#2E7D32', pos: '#B45F06', dis: '#4059AD', attn: '#6B7280' };
+  var detail = {
+    input: '<span class="verdict" style="color:#2E7D32">Input pathway — best for encoders, weakest for the decoder.</span>' +
+      '<div class="deq">x&#8242;<sub>p</sub> = x<sub>p</sub> + E<sup>&#964;</sup> + E<sup>&#957;</sup></div>' +
+      'Transformer-XL: SyntaxGym 76.97 (+5.3 over baseline), PPL 16.16. On RoBERTa / DeBERTa / ModernBERT this simple addition is the winning recipe.',
+    pos: '<span class="verdict" style="color:#B45F06">Positional pathway — the strongest decoder variant.</span>' +
+      '<div class="deq">&Atilde; = AC + (1 + c) &middot; BD</div>' +
+      'The tag alignment c rescales the position term. Transformer-XL: SyntaxGym <b>80.60</b> (+10.3% rel.), PPL 16.95 (&minus;9.0%), GLUE +8.2% rel. Starts as exact vanilla TXL at initialization.',
+    dis: '<span class="verdict" style="color:#4059AD">Disentangled additive — the Inkling-shaped slot.</span>' +
+      '<div class="deq">&Atilde; = AC + BD + c</div>' +
+      'The syntactic score joins the logits as a third term, exactly where Inkling adds its content-conditioned relative bias. Transformer-XL: SyntaxGym 78.72, PPL 16.66 &mdash; better than input-side, short of the gate.',
+    attn: '<span class="verdict" style="color:#6B7280">Attention bias (Shaw-style) — studied, weaker.</span>' +
+      '<div class="deq">score += q &middot; W<sub>K</sub><sup>tag</sup>(E<sup>&#964;</sup>+E<sup>&#957;</sup>); &nbsp;output += &alpha; &middot; W<sub>V</sub><sup>tag</sup>(&middot;)</div>' +
+      'Per-key biases on logits and values, adapted from Shaw et al. (2018). SyntaxGym up to 78.10 alone; combining it with the positional pathway scores <em>below</em> either used alone &mdash; the same signal twice is redundant.'
+  };
+  var btns = document.querySelectorAll('#pathbtns button');
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var key = b.dataset.p;
+      btns.forEach(function (x) { x.classList.remove('active'); x.style.background = '#fff'; x.style.color = '#1F2937'; });
+      b.classList.add('active'); b.style.background = colors[key]; b.style.color = '#fff';
+      Object.keys(paths).forEach(function (k) {
+        var p = document.getElementById(paths[k]);
+        p.setAttribute('opacity', k === key ? 1 : 0.18);
+        p.setAttribute('stroke-width', k === key ? 3 : 2.2);
+      });
+      card.innerHTML = detail[key];
+    });
+  });
+})();
+
+// ---------- Widget 3: gating explorer ----------
+(function () {
+  var sBD = document.getElementById('sBD'), sC = document.getElementById('sC');
+  function upd() {
+    var bd = parseFloat(sBD.value), c = parseFloat(sC.value);
+    document.getElementById('vBD').textContent = bd.toFixed(2);
+    document.getElementById('vC').textContent = c.toFixed(2);
+    var add = c, mul = c * bd, max = 3;
+    function setBar(id, tid, v) {
+      var el = document.getElementById(id);
+      var w = Math.min(Math.abs(v) / max * 50, 50);
+      el.style.left = (v >= 0 ? 50 : 50 - w) + '%';
+      el.style.width = w + '%';
+      document.getElementById(tid).textContent = (v >= 0 ? '+' : '') + v.toFixed(2);
+    }
+    setBar('bAdd', 'tAdd', add);
+    setBar('bMul', 'tMul', mul);
+    var msg;
+    if (bd < 0.3) msg = 'BD ≈ 0: the query barely attends to this offset — the gate keeps syntax almost silent, while the additive term would still push at full strength.';
+    else if (Math.abs(mul) > Math.abs(add) * 1.5) msg = 'Strong positional preference: the gate amplifies syntax right where the model already looks — the correction (' + mul.toFixed(2) + ') outweighs the flat additive push (' + add.toFixed(2) + ').';
+    else msg = 'Moderate preference: gated and additive corrections are comparable here; the gap opens at the extremes.';
+    document.getElementById('gatemsg').textContent = msg;
+  }
+  sBD.addEventListener('input', upd); sC.addEventListener('input', upd); upd();
+})();
+</script>
 </body>
 </html>
