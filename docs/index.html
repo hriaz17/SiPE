@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiPE: Syntax-Informed Positional Embeddings for Transformers</title>
+<meta name="description" content="SiPE learns a lightweight syntactic prior from dependency parses and injects it into the positional pathway of Transformers, establishing a new Pareto frontier between syntactic supervision and inference cost.">
+<meta property="og:title" content="Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers">
+<meta property="og:description" content="A single-parse syntactic prior for the positional pathway: +10.3% SyntaxGym, −9.0% perplexity, +8.2% GLUE.">
+<meta property="og:image" content="assets/teaser.png">
+<style>
+  :root { --orange:#B45F06; --green:#2E7D32; --ink:#1F2937; --muted:#6B7280; }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: var(--ink);
+         max-width: 780px; margin: 0 auto; padding: 2.2rem 1.2rem 4rem; line-height: 1.6; }
+  .logo { display:block; margin: 0 auto 0.8rem; width: 110px; }
+  h1 { text-align:center; font-size: 1.75rem; line-height: 1.3; margin: 0.2rem 0 1rem; }
+  .authors, .affil { text-align:center; margin: 0.15rem 0; }
+  .authors a { color: var(--ink); }
+  .affil { color: var(--muted); font-style: italic; font-size: 0.95rem; }
+  .links { text-align:center; margin: 1.3rem 0 1.8rem; }
+  .links a { display:inline-block; margin: 0 0.4rem; padding: 0.45rem 1.1rem;
+             border-radius: 2rem; text-decoration: none; font-family: Helvetica, Arial, sans-serif;
+             font-size: 0.9rem; font-weight: 600; }
+  .btn-dark   { background: var(--ink);    color: #fff; }
+  .btn-orange { background: var(--orange); color: #fff; }
+  .btn-green  { background: var(--green);  color: #fff; }
+  .teaser { display:block; margin: 1.5rem auto; width: min(480px, 92%); }
+  .teasercap { text-align:center; color: var(--muted); font-size: 0.85rem; width: min(560px, 95%); margin: 0 auto 1.5rem; }
+  h2 { font-size: 1.2rem; border-bottom: 1px solid #E5E7EB; padding-bottom: 0.25rem; margin-top: 2.2rem; }
+  .note { background: #FFF7ED; border-left: 4px solid var(--orange); padding: 0.7rem 1rem; border-radius: 0 6px 6px 0; }
+  pre { background: #F3F4F6; padding: 1rem; border-radius: 8px; overflow-x: auto;
+        font-size: 0.8rem; line-height: 1.45; }
+  footer { margin-top: 3rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<img class="logo" src="assets/logo.png" alt="SiPE logo">
+<h1>Beyond Sequence Order:<br>Syntax-Informed Positional Embeddings for Transformers</h1>
+
+<p class="authors">
+  <a href="https://hriaz17.github.io/">Haris Riaz</a> &nbsp;·&nbsp;
+  Hyungji Kim &nbsp;·&nbsp;
+  <a href="https://surdeanu.cs.arizona.edu/mihai/">Mihai Surdeanu</a>
+</p>
+<p class="affil">Department of Computer Science, University of Arizona</p>
+
+<div class="links">
+  <a class="btn-dark"   href="https://github.com/hriaz17/SiPE">&lt;/&gt; Code</a>
+  <a class="btn-orange" href="#citation">&#128214; Paper</a>
+  <a class="btn-green"  href="#citation">&#128221; BibTeX</a>
+</div>
+
+<img class="teaser" src="assets/teaser.png" alt="SiPE Pareto frontier">
+<p class="teasercap"><b>SiPE moves the Pareto frontier between syntactic supervision and inference
+cost:</b> conditioning on a single parse, it retains most of the SyntaxGym benefit of
+beam marginalization (≈300 parses) at 1/300th of the inference cost, while clearly
+outperforming parser-free methods.</p>
+
+<h2>TL;DR</h2>
+<p><b>SiPE</b> (<b>S</b>yntax-<b>i</b>nformed <b>P</b>ositional <b>E</b>mbeddings) learns a
+lightweight syntactic prior from dependency parses during pretraining and injects it into the
+<em>positional pathway</em> of Transformers &mdash; across all three dominant positional-encoding
+families (absolute, relative, rotary), for both encoders and decoders. Models pre-trained with
+SiPE improve SyntaxGym by up to <b>10.3%</b> while <em>simultaneously reducing</em> perplexity by
+<b>9.0%</b> &mdash; a metric nearly every existing syntax-injection method instead degrades &mdash;
+and lift GLUE scores by up to <b>8.2%</b>.</p>
+
+<h2>Code &amp; Artifacts</h2>
+<p class="note">🚧 Code, hexatagged training data, and pretrained checkpoints will be released
+upon acceptance. Watch the <a href="https://github.com/hriaz17/SiPE">GitHub repository</a> for updates.</p>
+
+<h2 id="citation">Citation</h2>
+<pre>@misc{riaz2026sipe,
+  title  = {Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers},
+  author = {Riaz, Haris and Kim, Hyungji and Surdeanu, Mihai},
+  year   = {2026},
+  note   = {Under review}
+}</pre>
+
+<footer>© 2026 · <a href="https://github.com/hriaz17/SiPE">hriaz17/SiPE</a></footer>
+</body>
+</html>
