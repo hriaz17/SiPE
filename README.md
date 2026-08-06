@@ -17,7 +17,8 @@
   Hyungji Kim ·
   <a href="https://surdeanu.cs.arizona.edu/mihai/">Mihai Surdeanu</a>
   <br>
-  <em>Department of Computer Science, University of Arizona</em>
+  <br>
+  <em>Computational Language Understanding (CLU) Lab, </em> University of Arizona
 </p>
 
 ---
