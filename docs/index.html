@@ -58,14 +58,26 @@ cost:</b> conditioning on a single parse, it retains most of the SyntaxGym benef
 beam marginalization (≈300 parses) at 1/300th of the inference cost, while clearly
 outperforming parser-free methods.</p>
 
-<h2>TL;DR</h2>
-<p><b>SiPE</b> (<b>S</b>yntax-<b>i</b>nformed <b>P</b>ositional <b>E</b>mbeddings) learns a
-lightweight syntactic prior from dependency parses during pretraining and injects it into the
-<em>positional pathway</em> of Transformers &mdash; across all three dominant positional-encoding
-families (absolute, relative, rotary), for both encoders and decoders. Models pre-trained with
-SiPE improve SyntaxGym by up to <b>10.3%</b> while <em>simultaneously reducing</em> perplexity by
-<b>9.0%</b> &mdash; a metric nearly every existing syntax-injection method instead degrades &mdash;
-and lift GLUE scores by up to <b>8.2%</b>.</p>
+<h2>Abstract</h2>
+<p>Positional embeddings (PE) in Transformers encode token distance and order but are largely
+agnostic to <em>syntactic structure</em>. We introduce <b>S</b>yntax-<b>i</b>nformed
+<b>P</b>ositional <b>E</b>mbeddings (<b>SiPE</b>), which learns a lightweight syntactic prior
+from dependency parses during pretraining and injects it across all three dominant PE families
+(absolute, relative, rotary), for both encoders and decoders, leaving self-attention and the
+rest of the architecture untouched. We isolate <em>where</em> and <em>how</em> the prior should
+enter the model, and find it depends on the architecture: for autoregressive decoders that use
+relative PE, the prior is strongest when coupled multiplicatively with the relative-position
+term of the attention score, outperforming injection into the input embeddings, into
+self-attention, or into the positional and attention terms jointly &mdash; while for encoders it
+is best added directly to the input embeddings, composing with each encoder's native positional
+mechanism. We find that models pre-trained with SiPE improve on the SyntaxGym benchmark by up to
+10.3% while simultaneously reducing perplexity by 9.0% over a base model with no syntactic
+supervision &mdash; a metric nearly every existing syntax-injection method instead degrades.
+Crucially, these gains extend beyond syntactic generalization: SiPE also improves real-world
+language understanding, raising scores on the GLUE benchmark by up to 8.2% over a model trained
+without it. Unlike existing syntactic language models that marginalize over many parses at
+inference or discard syntax at runtime, SiPE conditions on a single parse, establishing a new
+Pareto frontier between syntactic supervision and inference cost.</p>
 
 <h2>Code &amp; Artifacts</h2>
 <p class="note">🚧 Code, hexatagged training data, and pretrained checkpoints will be released
