@@ -152,13 +152,13 @@
   (<i>folder</i>).</div>
 </div>
 
-<p>To act on this sentence, a model has to connect <i>move</i> to <i>file</i> and to
-<i>folder</i>. The parse above hands you those connections directly. Positional embeddings —
-the part of a Transformer that tells it where each token sits in the sentence — do not: absolute
-positions say only “<i>move</i> is token 2, <i>folder</i> is token 8,” and relative positions say
-only “six tokens apart.” Six tokens is far enough that attention tends to fade with distance,
-even though a single arc connects the two words. Every positional scheme in use today measures
-<em>where</em> tokens are; none of them represents <em>how tokens relate</em>.</p>
+<p>Acting on this sentence means connecting <i>move</i> to <i>file</i> and to <i>folder</i>. The
+parse gives those connections away for free. A Transformer’s positional embeddings — the
+machinery that tells the model where each token sits — do not. Absolute positions say that
+<i>move</i> is token 2 and <i>folder</i> is token 8. Relative positions say the two are six
+tokens apart — a distance at which attention has already begun to fade, even though a single arc
+joins the words. Positional encodings of every flavor measure <em>where</em> tokens are. None of
+them says <em>how tokens relate</em>.</p>
 
 <p>Work that feeds this missing structure into language models sits at two extremes.
 <b>Joint syntactic LMs</b> (Transformer Grammars, Pushdown Layers, PLM) model the sentence and
@@ -280,10 +280,16 @@ copy it from its own input.</p>
 
 <h2 id="position">2. How position enters attention</h2>
 
-<p>To decide where the tags should enter, it helps to see where <em>position</em> enters. In a
-Transformer, every token computes an attention score against every other token — the number that
-decides how much token <i>i</i> “looks at” token <i>j</i>. In Transformer-XL that score splits
-cleanly into two pieces:</p>
+<p>To decide where the tags should enter, it helps to see where <em>position</em> enters. Our
+decoder experiments use <b>Transformer-XL</b> — one of the earliest LLM-like architectures. An
+odd choice, you might say, in the RoPE era; as you’ll see in §8, it aged better than it looks.
+We switch off much of what made it “-XL” — the segment-level recurrence and memory — leaving a
+purely causal, autoregressive decoder. What remains is the part we care about: its relative
+positional encoding.</p>
+
+<p>In a Transformer, every token computes an attention score against every other token — the
+number that decides how much token <i>i</i> “looks at” token <i>j</i>. In Transformer-XL that
+score splits cleanly into two pieces:</p>
 
 <div class="eq"><b>A</b><sub>ij</sub> = <b>AC</b><sub>ij</sub> + <b>BD</b><sub>ij</sub></div>
 
