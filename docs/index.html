@@ -165,20 +165,23 @@
 </div>
 
 <p>Acting on this sentence means connecting <i>move</i> to <i>file</i> and to <i>folder</i>. The
-parse gives those connections away for free. A Transformer’s positional embeddings — the
-machinery that tells the model where each token sits — do not. Absolute positions say that
+parse gives those connections away for free. A Transformer’s positional embeddings — which
+tell the model where each token sits — do not. Absolute positions say that
 <i>move</i> is token 2 and <i>folder</i> is token 8. Relative positions say the two are six
 tokens apart — a distance at which attention has already begun to fade, even though a single arc
 joins the words. Positional encodings of every flavor measure <em>where</em> tokens are. None of
 them says <em>how tokens relate</em>.</p>
 
 <p>Work that feeds this missing structure into language models sits at two extremes.
-<b>Joint syntactic LMs</b> (Transformer Grammars, Pushdown Layers, PLM) model the sentence and
+<b>Joint syntactic LMs</b> (<a href="https://aclanthology.org/2022.tacl-1.81/">Transformer
+Grammars</a>, <a href="https://aclanthology.org/2023.emnlp-main.195/">Pushdown Layers</a>,
+<a href="https://aclanthology.org/2021.acl-long.289/">PLM</a>) model the sentence and
 its tree together — syntactically strong, but to score a plain sentence they have to sum its
 probability over hundreds of candidate trees, because the model never sees a sentence without
-one. <b>Parser-free methods</b> (TreeReg, Tree-Planted Transformers) use trees only as a training
-signal and throw the parser away afterwards — cheap at inference, but much of the syntactic
-ability goes with it:</p>
+one. <b>Parser-free methods</b> (<a href="https://aclanthology.org/2025.naacl-long.407/">TreeReg</a>,
+<a href="https://aclanthology.org/2024.findings-acl.303/">Tree-Planted Transformers</a>) use
+trees only as a training signal and throw the parser away afterwards — cheap at inference, but
+they also lose some syntactic ability along the way:</p>
 
 <figure>
   <img src="assets/pareto_schematic.png" alt="Schematic: prior work trains and decodes with N trees or none; SiPE uses exactly one">
@@ -215,7 +218,7 @@ the prior is built, where it should enter the Transformer, and what it does once
 
 <div class="toc">
   <b>Contents</b><br>
-  <a href="#hexatags">1. From a dependency parse to seven tags</a><br>
+  <a href="#hexatags">1. From a dependency parse tree to seven tags</a><br>
   <a href="#position">2. How position enters attention</a><br>
   <a href="#where">3. Where should syntax enter? (interactive)</a><br>
   <a href="#gate">4. Rescaling position by syntax (interactive)</a><br>
@@ -227,7 +230,7 @@ the prior is built, where it should enter the Transformer, and what it does once
   <a href="#citation">Citation</a>
 </div>
 
-<h2 id="hexatags">1. From a dependency parse to seven tags</h2>
+<h2 id="hexatags">1. From a dependency parse tree to seven tags</h2>
 
 <p>A tree is an awkward object to feed a Transformer, which wants a flat sequence.
 <b><a href="https://aclanthology.org/2023.acl-short.124/">Hexatagging</a></b> (Amini, Liu &amp;
@@ -281,7 +284,7 @@ add to its own. Hover the paper’s running example:</p>
 <p>One thing to be clear about before going further: <b>every sequence the model ever sees is
 hexatagged first</b> — during pretraining, during fine-tuning, and at inference. A fast parser
 runs once over the input, and from then on the tags are simply extra inputs riding along with
-the tokens. (This is the “single parse” the Pareto figure charges us for.)</p>
+the tokens. (This is the single parse on the x-axis of the Pareto figure above.)</p>
 
 <p>Two details matter. The tags attach only to each word’s <b>first subword</b> (tokenizers often
 split one word into several pieces; only the first piece gets the tags), so a word contributes
@@ -785,7 +788,7 @@ frontier scale. Watch
 
 <h2 id="citation">Citation</h2>
 
-<p>Please cite this work as:</p>
+<p>If you found this work helpful, please cite it as:</p>
 
 <pre><code>@misc{riaz2026sequenceordersyntaxinformedpositional,
       title={Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers},
