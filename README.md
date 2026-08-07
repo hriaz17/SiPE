@@ -31,6 +31,14 @@
   <img src="docs/assets/teaser.png" alt="SiPE Pareto frontier" width="55%"/>
 </p>
 
+## Approach
+
+<p align="center">
+  <img src="docs/assets/method_diagram.png" alt="SiPE approach overview: dependency arcs to binary head tree to hexatags (left); tag lookup tables injected into the input with auxiliary tag-prediction heads (right)" width="100%"/>
+</p>
+
+**Overview of the approach.** Every sequence the model sees — during pretraining, fine-tuning, and inference — is first hexatagged by a fast dependency parser. **Left:** the dependency parse is converted to a *binary head tree* (BHT) and read off as per-word **hexatags**: a terminal tag τ (2 values, the word's attachment direction) and a non-terminal tag ν (4 values from the BHT, plus an EOS tag introduced by the left shift). **Right:** the simplest injection, for absolute positional embeddings — each word's first subword adds one row from each tiny tag table (**E**<sup>τ</sup>: 2×D, **E**<sup>ν</sup>: 5×D, ~7·D parameters in total) to its input embedding, and three prediction heads recover the token and both tags at masked positions (`L = L_MLM + L_T + L_NT`). For decoders, next-token prediction replaces MLM. For relative-PE decoders, the strongest variant instead **multiplies** the position term of the attention score by a syntax alignment: `Ã = AC + (1 + c)·BD`.
+
 ## Code
 
 > 🚧 **Code, hexatagged training data, and pretrained checkpoints will be released upon acceptance.**
