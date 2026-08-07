@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SiPE: Syntax-Informed Positional Embeddings for Transformers</title>
+<title>Introducing Syntax-Informed Positional Embeddings (SiPE)</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <meta name="description" content="Positional embeddings tell a Transformer where tokens are, not how they relate. SiPE injects a seven-tag syntactic prior into the positional pathway — improving SyntaxGym, perplexity, and GLUE at the cost of a single parse.">
 <meta property="og:title" content="Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers">
 <meta property="og:description" content="A single-parse syntactic prior for the positional pathway: +10.3% SyntaxGym, −9.0% perplexity, +8.2% GLUE.">
@@ -123,33 +124,44 @@
 <p>Suppose you hand an AI agent this request:</p>
 
 <div class="widget">
-  <svg id="depsvg" viewBox="0 0 660 150" width="100%">
-    <defs><marker id="depArrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
-      <path d="M0,0 L7,3.5 L0,7 z" fill="#B45F06"/></marker></defs>
+  <svg id="depsvg" viewBox="0 0 660 185" width="100%">
+    <defs>
+      <marker id="depGray" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+        <path d="M0,0 L7,3.5 L0,7 z" fill="#C9CDD3"/></marker>
+      <marker id="depArrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+        <path d="M0,0 L7,3.5 L0,7 z" fill="#B45F06"/></marker>
+    </defs>
+    <text x="125" y="22" font-size="10.5" fill="#9CA3AF" text-anchor="middle" letter-spacing="1">ROOT</text>
+    <line x1="125" y1="26" x2="125" y2="142" stroke="#E5E7EB" stroke-width="1.4" stroke-dasharray="3 3"/>
     <g fill="none" stroke="#C9CDD3" stroke-width="2">
-      <path id="darc_obj" d="M 122 118 C 122 62, 320 62, 320 115"/>
-      <path id="darc_obl" d="M 128 118 C 150 18, 590 18, 596 115"/>
-      <path id="darc_amod" d="M 253 118 C 253 84, 316 84, 316 115"/>
-      <path id="darc_det" d="M 462 118 C 462 84, 592 84, 592 115"/>
+      <path id="darc_intj" d="M 119 152 C 119 118, 55 118, 54 149"  marker-end="url(#depGray)"/>
+      <path id="darc_obj"  d="M 131 152 C 131 88, 314 88, 314 149"  marker-end="url(#depGray)"/>
+      <path id="darc_obl"  d="M 137 152 C 160 40, 585 40, 590 149"  marker-end="url(#depGray)"/>
+      <path id="darc_det1" d="M 312 152 C 312 108, 194 108, 193 149" marker-end="url(#depGray)"/>
+      <path id="darc_amod" d="M 306 152 C 306 124, 255 124, 254 149" marker-end="url(#depGray)"/>
+      <path id="darc_case" d="M 588 152 C 588 96, 374 96, 373 149"  marker-end="url(#depGray)"/>
+      <path id="darc_det2" d="M 594 152 C 594 124, 464 124, 463 149" marker-end="url(#depGray)"/>
     </g>
-    <text x="221" y="55" font-size="11.5" fill="#9CA3AF" text-anchor="middle" font-style="italic">what to move</text>
-    <text x="370" y="28" font-size="11.5" fill="#9CA3AF" text-anchor="middle" font-style="italic">where to move it</text>
+    <text x="222" y="99" font-size="11.5" fill="#9CA3AF" text-anchor="middle" font-style="italic"
+          stroke="#FFFFFF" stroke-width="6" paint-order="stroke">what to move</text>
+    <text x="372" y="30" font-size="11.5" fill="#9CA3AF" text-anchor="middle" font-style="italic"
+          stroke="#FFFFFF" stroke-width="6" paint-order="stroke">where to move it</text>
     <g font-size="19" fill="#1F2937" text-anchor="middle">
-      <text class="word" id="d0" x="52"  y="136" style="cursor:pointer">Please</text>
-      <text class="word" id="d1" x="125" y="136" style="cursor:pointer" font-weight="700">move</text>
-      <text class="word" id="d2" x="192" y="136" style="cursor:pointer">this</text>
-      <text class="word" id="d3" x="253" y="136" style="cursor:pointer">large</text>
-      <text class="word" id="d4" x="318" y="136" style="cursor:pointer" font-weight="700">file</text>
-      <text class="word" id="d5" x="372" y="136" style="cursor:pointer">to</text>
-      <text class="word" id="d6" x="462" y="136" style="cursor:pointer">another</text>
-      <text class="word" id="d7" x="594" y="136" style="cursor:pointer" font-weight="700">folder</text>
+      <text class="word" id="d0" x="52"  y="170" style="cursor:pointer">Please</text>
+      <text class="word" id="d1" x="125" y="170" style="cursor:pointer" font-weight="700">move</text>
+      <text class="word" id="d2" x="192" y="170" style="cursor:pointer">this</text>
+      <text class="word" id="d3" x="253" y="170" style="cursor:pointer">large</text>
+      <text class="word" id="d4" x="318" y="170" style="cursor:pointer" font-weight="700">file</text>
+      <text class="word" id="d5" x="372" y="170" style="cursor:pointer">to</text>
+      <text class="word" id="d6" x="462" y="170" style="cursor:pointer">another</text>
+      <text class="word" id="d7" x="594" y="170" style="cursor:pointer" font-weight="700">folder</text>
     </g>
   </svg>
-  <div class="depinfo" id="depinfo">Hover a word to see which word it attaches to.</div>
-  <div class="wcap">Linguists call this a <b>dependency parse</b>: every word gets an arrow to
-  the word it depends on (its <em>head</em>). The two arcs that matter for acting on this request
-  both hang off <i>move</i>: the thing to move (<i>file</i>) and the destination
-  (<i>folder</i>).</div>
+  <div class="depinfo" id="depinfo">Hover a word to see how it fits into the tree.</div>
+  <div class="wcap">Linguists call this a <b>dependency parse</b>: every arrow points from a
+  word to a word that depends on it, and every word except the root (<i>move</i>) sits at the
+  end of exactly one arrow. The two arcs that matter for acting on this request both hang off
+  <i>move</i>: the thing to move (<i>file</i>) and the destination (<i>folder</i>).</div>
 </div>
 
 <p>Acting on this sentence means connecting <i>move</i> to <i>file</i> and to <i>folder</i>. The
@@ -218,19 +230,22 @@ the prior is built, where it should enter the Transformer, and what it does once
 <h2 id="hexatags">1. From a dependency parse to seven tags</h2>
 
 <p>A tree is an awkward object to feed a Transformer, which wants a flat sequence.
-<b>Hexatagging</b> solves this: first convert the dependency tree into a <em>binary head
-tree</em> (BHT) — a version of the tree where every internal node has exactly two children, one
-of which carries the “head” (the more important word) — then read the whole tree back off as a
-short tag on each word. The name is literal: hexatagging needs exactly <b>six</b> tag types.</p>
+<b><a href="https://aclanthology.org/2023.acl-short.124/">Hexatagging</a></b> (Amini, Liu &amp;
+Cotterell, 2023) solves this: first convert the dependency tree into a <em>binary head tree</em>
+(BHT) — a version of the tree where every internal node has exactly two children, one of which
+carries the “head” (the more important word) — then read the whole tree back off as a short tag
+on each word. The name is literal: hexatagging needs exactly <b>six</b> tag types.</p>
 
 <table class="tags">
   <tr><th>Tag</th><th>Vocabulary</th><th>What it says, in plain terms</th></tr>
-  <tr><td class="tag">τ&nbsp;∈&nbsp;{L, R}</td><td>terminal (2)</td>
-      <td>does this word attach to a head on its <b>left</b> or on its <b>right</b>? (the
-      direction of the arrow you hovered over above)</td></tr>
-  <tr><td class="tag">ν&nbsp;∈&nbsp;{LL, LR, RL, RR}</td><td>non-terminal (4)</td>
-      <td>for each internal node of the binary head tree: is the node a left or right child, and
-      does its head come from its left or right subtree?</td></tr>
+  <tr><td class="tag">τ&nbsp;∈&nbsp;{ ↗&nbsp;, ↖&nbsp;}</td><td>terminal (2)</td>
+      <td>is this word a <b>left child</b> (↗) or a <b>right child</b> (↖) of its parent in the
+      tree? — i.e., does it attach to the left or to the right, like the arrows you hovered
+      over above</td></tr>
+  <tr><td class="tag">ν&nbsp;∈&nbsp;{ ⇗<sup style="color:#CC6677">R</sup>, ⇗<sup style="color:#CC6677">L</sup>, ⇖<sup style="color:#CC6677">R</sup>, ⇖<sup style="color:#CC6677">L</sup> }</td><td>non-terminal (4)</td>
+      <td>for each internal node of the binary head tree: is the node a left (⇗) or right (⇖)
+      child, and does its head come from its <span style="color:#CC6677">right</span> or
+      <span style="color:#CC6677">left</span> subtree?</td></tr>
   <tr><td class="tag">ν&nbsp;=&nbsp;EOS</td><td>non-terminal (+1)</td>
       <td>an <b>end-of-sequence</b> tag. Aligning tree tags with words requires shifting them one
       position left, which leaves one slot at the end — the seventh and final value.</td></tr>
@@ -511,7 +526,8 @@ encoders gain consistently across all three positional-encoding families and bot
 
 <p><b>Second, simplest fusion wins</b> — the full version of the sweep from §3, now including
 variants that use the fine-grained 40-label dependency-relation inventory instead of our two
-coarse tags. The richer signal never closes the gap:</p>
+coarse tags. The richer signal from full dependency-relation labels does not help over the plain
+terminal and non-terminal tags:</p>
 
 <figure>
   <img src="assets/glue_avg.png" alt="Average GLUE across prior-injection variants">
@@ -527,11 +543,11 @@ coarse tags. The richer signal never closes the gap:</p>
   method.</figcaption>
 </figure>
 
-<p><b>Third, the language-modeling tax is negative.</b> Most syntax-injection methods pay for
-their syntactic gains with worse perplexity (TreeReg: 22.30; TPT variants: 45–48, against our
-baseline’s 18.63). SiPE’s multiplicative variant <em>improves</em> perplexity to 16.95 while
-matching or beating the parser-free methods on syntactic generalization — that is the Pareto
-scatter at the top of this post.</p>
+<p><b>Third, perplexity improves rather than degrades.</b> Most syntax-injection methods trade
+language-modeling quality for syntactic ability: TreeReg reaches perplexity 22.30 and the TPT
+variants 45–48, against our baseline’s 18.63. SiPE’s multiplicative variant lowers perplexity to
+16.95 while matching or beating the parser-free methods on syntactic generalization — this is
+the Pareto scatter at the top of the post.</p>
 
 <h2 id="layers">6. Syntax wants to enter at layer one</h2>
 
@@ -567,13 +583,17 @@ the baseline doesn’t, and measured how much attention the verb pays to its obj
   redistribution than input-pathway injection does.</figcaption>
 </figure>
 
-<h2 id="discussion">8. Relative PE is back — good timing</h2>
+<h2 id="discussion">8. Relative PE is back</h2>
 
-<p>We built SiPE’s decoder story on Transformer-XL rather than a RoPE-era LLM architecture, and
-for most of the project that looked like a retro choice. Then, concurrent with our work, Thinking
-Machines Lab released <a href="https://thinkingmachines.ai/news/introducing-inkling/">Inkling</a>
-— a 975-billion-parameter open-weights mixture-of-experts model (41B active per token, 1M-token
-context) — and its positional choice vindicates the retro one:</p>
+<p>We chose Transformer-XL for the decoder experiments for a concrete reason: its relative
+positional encoding exposes position as an explicit, learned term in the attention score — the
+<b>BD</b> term of §2 — which is precisely the kind of pathway a positional prior can attach to.
+(It is also the standard backbone in the syntactic-LM literature we compare against.) Still,
+building on a 2019 architecture instead of a RoPE-based one meant betting that this style of
+positional encoding remains relevant. Then, concurrent with our work, Thinking Machines Lab
+released <a href="https://thinkingmachines.ai/news/introducing-inkling/">Inkling</a> — a
+975-billion-parameter open-weights mixture-of-experts model (41B active per token, 1M-token
+context) — and its positional choice settled that bet:</p>
 
 <blockquote>“We find that encoding position with a relative positional embedding performs better
 and extrapolates better to longer sequences than the more widely adopted Rotary Positional
@@ -587,23 +607,24 @@ position interaction of exactly the <b>BD</b> form from §2, computed with the s
 trick. A frontier lab independently concluded that this machinery is worth a trillion-parameter
 bet — the release that sent the community back to the 2018 papers.</p>
 
-<p>The correspondence to SiPE is precise enough to spell out:</p>
+<p>The two designs were built independently, at very different scales, and for different
+purposes — but they rhyme in ways worth spelling out:</p>
 
 <ul>
-<li><b>Inkling ≈ our disentangled variant.</b> Inkling adds ⟨projected hidden state, per-distance
-embedding⟩ to the scores; our disentangled variant adds ⟨query, projected <em>tag</em>⟩ alongside
-<b>BD</b>. Same additive slot — the difference is what conditions the bias: a latent projection
-there, an explicit, parser-supplied, supervised syntactic tag here.</li>
-<li><b>Our strongest variant goes one step further.</b> Inkling’s relative bias is strictly
-additive. Our best decoder result comes from multiplying the position term by the tag alignment
-— and additive vs. multiplicative is worth about two SyntaxGym points in our ablations. If the
-coefficients trick is coming back at frontier scale, the multiplicative coupling seems worth
-trying too.</li>
+<li><b>The same additive slot.</b> Inkling adds ⟨projected hidden state, per-distance embedding⟩
+to the attention scores; our disentangled variant adds a term of the same shape — ⟨query,
+projected <em>tag</em>⟩ — alongside <b>BD</b>. What differs is the conditioning signal: Inkling’s
+bias is driven by a latent projection the model learns entirely on its own, ours by an explicit
+syntactic tag supplied by a parser.</li>
+<li><b>An open question about the coupling.</b> Inkling’s relative bias is additive. In our
+(much smaller-scale) ablations, multiplying the position term by the tag alignment beat adding
+it, by about two SyntaxGym points. Whether anything similar holds for latent, non-syntactic
+biases at frontier scale is an open question — we would genuinely like to see it tried.</li>
 </ul>
 
 <p>Either way, the larger point stands on its own: the positional pathway is not a solved,
-frozen part of the architecture. It is a learned channel, it responds to content, and — as our
-results show — it responds to <em>structure</em>.</p>
+frozen part of the architecture. It is a learned channel, it responds to content, and — our
+results suggest — it responds to <em>structure</em>.</p>
 
 <h2 id="limitations">9. Limitations and what’s next</h2>
 
@@ -613,7 +634,7 @@ but tags of earlier words can change as the sentence grows, which invalidates th
 values that make modern decoding fast. Efficient incremental decoding under a per-step syntactic
 prior is the direction we care most about next. Our experiments are also bounded by an academic
 compute budget — small models, English, WikiText/BLLIP-scale pretraining — and our reported
-perplexity is conditioned on the single parse (that is the trade the Pareto figure makes
+perplexity is conditioned on the single parse (that is the trade-off the Pareto figure makes
 explicit).</p>
 
 <p class="note">🚧 <b>Code, hexatagged training data, and pretrained checkpoints will be released
@@ -641,26 +662,26 @@ multiplicative coupling at frontier scale. Watch
 (function () {
   var info = document.getElementById('depinfo');
   var data = {
-    d0: {arc: null, msg: '<b>Please</b> — a politeness marker on <b>move</b>; it carries no argument.'},
-    d1: {arc: null, msg: '<b>move</b> is the <b>root</b> — the main verb. Executing the request means finding its arguments: what to move, and where.'},
-    d2: {arc: null, msg: '<b>this</b> → points at <b>file</b>, the word it modifies.'},
-    d3: {arc: 'darc_amod', msg: '<b>large</b> → modifies <b>file</b> (its head, one word to the <b>right</b>).'},
-    d4: {arc: 'darc_obj', msg: '<b>file</b> → the <b>object</b> of <b>move</b>: the thing being moved. Its head is three words to the <b>left</b>.'},
-    d5: {arc: null, msg: '<b>to</b> → marks <b>folder</b> as a destination.'},
-    d6: {arc: 'darc_det', msg: '<b>another</b> → points at <b>folder</b>, the word it modifies.'},
-    d7: {arc: 'darc_obl', msg: '<b>folder</b> → the destination of <b>move</b>. Six words from its head — distance says “far”; the parse says “directly attached.”'}
+    d0: {arc: ['darc_intj'], msg: '<b>Please</b> — a politeness marker hanging off <b>move</b>.'},
+    d1: {arc: ['darc_intj', 'darc_obj', 'darc_obl'], msg: '<b>move</b> is the <b>root</b> — the main verb. Executing the request means following its arrows: what to move, and where.'},
+    d2: {arc: ['darc_det1'], msg: '<b>this</b> → a determiner of <b>file</b>, the word it depends on.'},
+    d3: {arc: ['darc_amod'], msg: '<b>large</b> → modifies <b>file</b> (its head, one word to the <b>right</b>).'},
+    d4: {arc: ['darc_obj'], msg: '<b>file</b> → the <b>object</b> of <b>move</b>: the thing being moved. Its head is three words to the <b>left</b>.'},
+    d5: {arc: ['darc_case'], msg: '<b>to</b> → a case marker on <b>folder</b>: it flags folder as a destination.'},
+    d6: {arc: ['darc_det2'], msg: '<b>another</b> → a determiner of <b>folder</b>, the word it depends on.'},
+    d7: {arc: ['darc_obl'], msg: '<b>folder</b> → the destination of <b>move</b>. Six words from its head — distance says “far”; the parse says “directly attached.”'}
   };
-  var arcs = ['darc_obj', 'darc_obl', 'darc_amod', 'darc_det'];
+  var arcs = ['darc_intj', 'darc_obj', 'darc_obl', 'darc_det1', 'darc_amod', 'darc_case', 'darc_det2'];
   Object.keys(data).forEach(function (id) {
     var el = document.getElementById(id);
     el.addEventListener('mouseenter', function () {
       info.innerHTML = data[id].msg;
       arcs.forEach(function (a) {
         var p = document.getElementById(a);
-        var on = (data[id].arc === a);
+        var on = data[id].arc.indexOf(a) !== -1;
         p.setAttribute('stroke', on ? '#B45F06' : '#C9CDD3');
         p.setAttribute('stroke-width', on ? 2.8 : 2);
-        if (on) p.setAttribute('marker-end', 'url(#depArrow)'); else p.removeAttribute('marker-end');
+        p.setAttribute('marker-end', on ? 'url(#depArrow)' : 'url(#depGray)');
       });
     });
   });
@@ -670,7 +691,7 @@ multiplicative coupling at frontier scale. Watch
 (function () {
   var info = document.getElementById('arcinfo');
   var data = {
-    w0: {arc: 'arc0', msg: '<b>she</b> → head <b>watches</b>, to the <b>right</b> → terminal tag τ = R. ν comes from the binary head tree.'},
+    w0: {arc: 'arc0', msg: '<b>she</b> → head <b>watches</b>, to the <b>right</b> → terminal tag τ = ↗ (left child). ν comes from the binary head tree.'},
     w1: {arc: null, msg: '<b>watches</b> is the <b>root</b> — every other word ultimately hangs off it.'},
     w2: {arc: 'arc2', msg: '<b>funny</b> → head <b>videos</b>, to the <b>right</b>: an adjective waiting for its noun.'},
     w3: {arc: 'arc3', msg: '<b>videos</b> → head <b>watches</b>, to the <b>left</b>: the object of the verb, two words away.'}
