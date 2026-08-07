@@ -220,7 +220,7 @@ the prior is built, where it should enter the Transformer, and what it does once
   <a href="#where">3. Where should syntax enter? (interactive)</a><br>
   <a href="#gate">4. Rescaling position by syntax (interactive)</a><br>
   <a href="#results">5. Results</a><br>
-  <a href="#layers">6. Syntax wants to enter at layer one</a><br>
+  <a href="#layers">6. Syntax in decoders is best injected at layer 1</a><br>
   <a href="#attention">7. What the model does with it</a><br>
   <a href="#discussion">8. Relative PE is back — good timing</a><br>
   <a href="#limitations">9. Limitations and what’s next</a><br>
@@ -278,12 +278,70 @@ add to its own. Hover the paper’s running example:</p>
   tree. Only a word’s <em>first subword</em> carries its tags.</div>
 </div>
 
+<p>One thing to be clear about before going further: <b>every sequence the model ever sees is
+hexatagged first</b> — during pretraining, during fine-tuning, and at inference. A fast parser
+runs once over the input, and from then on the tags are simply extra inputs riding along with
+the tokens. (This is the “single parse” the Pareto figure charges us for.)</p>
+
 <p>Two details matter. The tags attach only to each word’s <b>first subword</b> (tokenizers often
 split one word into several pieces; only the first piece gets the tags), so a word contributes
 one tag signal no matter how it is split. And the tag tables are trained with an <b>auxiliary
-tag-prediction loss</b> alongside the usual language-modeling objective — at masked positions the
-tag inputs are withheld, so the model must <em>infer</em> the syntax from context rather than
-copy it from its own input.</p>
+tag-prediction loss</b> alongside the usual language-modeling objective. What that objective
+looks like differs between encoders and decoders:</p>
+
+<div class="widget">
+  <svg viewBox="0 0 680 348" width="100%">
+    <defs>
+      <marker id="mKT" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#9CA3AF"/></marker>
+      <marker id="mOT" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#B45F06"/></marker>
+    </defs>
+    <!-- Panel A: MLM -->
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#1F2937">Encoders — masked language modeling</text>
+    <g font-size="12.5">
+      <!-- word cells -->
+      <rect x="40"  y="76" width="110" height="30" rx="7" fill="#374151"/><text x="95"  y="96" fill="#fff" text-anchor="middle">she</text>
+      <rect x="170" y="76" width="110" height="30" rx="7" fill="#FFF7ED" stroke="#B45F06" stroke-width="1.6"/><text x="225" y="96" fill="#B45F06" text-anchor="middle" font-weight="700">[MASK]</text>
+      <rect x="300" y="76" width="110" height="30" rx="7" fill="#374151"/><text x="355" y="96" fill="#fff" text-anchor="middle">funny</text>
+      <rect x="430" y="76" width="110" height="30" rx="7" fill="#374151"/><text x="485" y="96" fill="#fff" text-anchor="middle">videos</text>
+      <!-- tag chips -->
+      <rect x="52"  y="112" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="95"  y="127" fill="#2E7D32" text-anchor="middle" font-size="11">↗ · ν</text>
+      <rect x="182" y="112" width="86" height="22" rx="11" fill="#F3F4F6"/><text x="225" y="127" fill="#9CA3AF" text-anchor="middle" font-size="10.5" text-decoration="line-through">tags withheld</text>
+      <rect x="312" y="112" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="355" y="127" fill="#2E7D32" text-anchor="middle" font-size="11">↗ · ν</text>
+      <rect x="442" y="112" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="485" y="127" fill="#2E7D32" text-anchor="middle" font-size="11">↖ · ν</text>
+      <!-- prediction bubble -->
+      <path d="M225 74 C 225 56, 300 48, 380 48" stroke="#B45F06" stroke-width="1.8" fill="none" marker-end="url(#mOT)"/>
+      <rect x="386" y="34" width="256" height="28" rx="14" fill="#FFF7ED" stroke="#B45F06"/>
+      <text x="514" y="53" text-anchor="middle" font-size="11" fill="#B45F06">predict token <tspan font-weight="700">watches</tspan> + its tags (↖ · ν)</text>
+    </g>
+    <text x="40" y="160" font-size="10.5" font-style="italic" fill="#6B7280">the masked word’s tags are withheld with it — the model must infer syntax, not copy it</text>
+    <line x1="20" y1="180" x2="660" y2="180" stroke="#E5E7EB"/>
+    <!-- Panel B: decoder -->
+    <text x="20" y="206" font-size="13" font-weight="700" fill="#1F2937">Decoders — next-token prediction</text>
+    <g font-size="12.5">
+      <rect x="40"  y="240" width="110" height="30" rx="7" fill="#374151"/><text x="95"  y="260" fill="#fff" text-anchor="middle">she</text>
+      <rect x="170" y="240" width="110" height="30" rx="7" fill="#374151"/><text x="225" y="260" fill="#fff" text-anchor="middle">watches</text>
+      <rect x="300" y="240" width="110" height="30" rx="7" fill="#374151"/><text x="355" y="260" fill="#fff" text-anchor="middle">funny</text>
+      <rect x="430" y="240" width="110" height="30" rx="7" fill="#374151" opacity="0.22"/><text x="485" y="260" fill="#fff" text-anchor="middle" opacity="0.35">videos</text>
+      <rect x="52"  y="276" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="95"  y="291" fill="#2E7D32" text-anchor="middle" font-size="11">↗ · ν</text>
+      <rect x="182" y="276" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="225" y="291" fill="#2E7D32" text-anchor="middle" font-size="11">↖ · ν</text>
+      <rect x="312" y="276" width="86" height="22" rx="11" fill="#E8F5E9"/><text x="355" y="291" fill="#2E7D32" text-anchor="middle" font-size="11">↗ · ν</text>
+      <rect x="442" y="276" width="86" height="22" rx="11" fill="#E8F5E9" opacity="0.22"/><text x="485" y="291" fill="#2E7D32" text-anchor="middle" font-size="11" opacity="0.35">↖ · ν</text>
+      <!-- cut line -->
+      <line x1="421" y1="228" x2="421" y2="308" stroke="#B45F06" stroke-width="1.6" stroke-dasharray="6 4"/>
+      <text x="421" y="222" text-anchor="middle" font-size="10" fill="#B45F06" font-style="italic">chop here ✂</text>
+      <!-- prediction bubble -->
+      <path d="M413 253 C 440 232, 470 226, 500 226" stroke="#B45F06" stroke-width="1.8" fill="none" marker-end="url(#mOT)"/>
+      <rect x="504" y="212" width="150" height="28" rx="14" fill="#FFF7ED" stroke="#B45F06"/>
+      <text x="579" y="231" text-anchor="middle" font-size="11" fill="#B45F06">predict <tspan font-weight="700">videos</tspan> + tags</text>
+    </g>
+    <text x="40" y="330" font-size="10.5" font-style="italic" fill="#6B7280">chop the tagged sequence anywhere: each tag travels with its word, so every prefix stays correctly tagged</text>
+  </svg>
+  <div class="wcap"><b>Top:</b> encoders train with masked language modeling — a masked word’s
+  tags are withheld along with it, and prediction heads recover the token <em>and</em> both tags.
+  <b>Bottom:</b> decoders train with ordinary next-token prediction — because each word carries
+  its own tags, truncating the sequence at any point leaves a correctly tagged prefix, and the
+  model predicts the next token and the next tags together.</div>
+</div>
 
 <figure>
   <img src="assets/method_diagram.png" alt="SiPE method diagram: hexatags from dependency arcs, injected via lookup tables">
@@ -332,7 +390,7 @@ distance. That is the <b>“coefficients trick”</b>:</p>
 </figure>
 
 <p>This lineage runs through Transformer-XL and DeBERTa, and it has two properties worth
-underlining. Unlike T5’s relative bias — a fixed number per distance — <b>BD</b> is
+underlining. Unlike <a href="https://arxiv.org/abs/1910.10683">T5</a>’s relative bias — a fixed number per distance — <b>BD</b> is
 <b>content-conditioned</b>: each query gets to weigh each distance differently. And unlike RoPE,
 which rotates queries and keys by fixed angles, this pathway is a <em>learned channel</em> whose
 meaning training gets to choose. It also spent years out of fashion — enough that when a
@@ -420,14 +478,17 @@ Transformer-XL:</p>
 </div>
 
 <p><b>That is the “where”. There is also a “how”:</b> once you pick a doorway, how do you merge
-the tag vector with the vector already living there? We swept that too, on RoBERTa (average over
-the eight GLUE tasks; baseline 72.30):</p>
+the tag vector with the vector already living there? To study this question in isolation, we
+wanted the model with the least going on around the injection point — so we ran the sweep on
+RoBERTa, the simplest of our encoders, whose absolute positional embeddings are just added to
+the input with nothing positional inside the attention layers. Numbers are averages over the
+eight GLUE tasks; the no-tag baseline scores 72.30:</p>
 
 <div class="fusegrid">
   <div class="fusecard">
     <h4 style="color:var(--green)">Add</h4>
     <div class="feq">x′ = x + E<sup>τ</sup> + E<sup>ν</sup></div>
-    <p>Just sum the vectors. No new parameters.</p>
+    <p>Just sum the vectors. Nothing beyond the shared tag tables.</p>
     <div class="fscore">GLUE 72.84 <span class="fup">▲ +0.54</span></div>
   </div>
   <div class="fusecard">
@@ -450,7 +511,8 @@ the eight GLUE tasks; baseline 72.30):</p>
   </div>
 </div>
 
-<p>Plain addition wins. It is the only fusion that adds zero parameters, and none of the cleverer
+<p>Plain addition wins. All four variants share the same 7·D tag tables; addition asks for
+nothing on top of them — no projection matrix, no learned dial — and none of the cleverer
 mechanisms beat it.</p>
 
 <p>Sweeping the entry points produces an equally clean ordering — and it is not the same for
@@ -458,7 +520,72 @@ encoders and decoders:</p>
 
 <p><b>Encoders (RoBERTa, DeBERTa-v3, ModernBERT):</b> just add the tag vectors to the input
 embedding. The prior composes with whatever positional scheme the encoder already uses —
-absolute, relative, or rotary — and this simple recipe beats fancier ones downstream.</p>
+absolute, relative, or rotary — and this simple recipe beats fancier ones downstream. The
+picture below shows why it is the same recipe three times: the green addition happens at the
+input in all three models, no matter where each model keeps its positional mechanism:</p>
+
+<div class="widget">
+  <svg viewBox="0 0 680 268" width="100%">
+    <defs>
+      <marker id="mGE" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#2E7D32"/></marker>
+      <marker id="mOE" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#B45F06"/></marker>
+      <marker id="mKE" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#9CA3AF"/></marker>
+    </defs>
+    <!-- column titles -->
+    <text x="122" y="22" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1F2937">RoBERTa · absolute PE</text>
+    <text x="340" y="22" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1F2937">DeBERTa-v3 · relative PE</text>
+    <text x="558" y="22" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1F2937">ModernBERT · rotary PE</text>
+    <!-- encoder boxes -->
+    <g>
+      <rect x="25"  y="34" width="194" height="88" rx="9" fill="#F6F5F2" stroke="#E5E7EB"/>
+      <rect x="243" y="34" width="194" height="88" rx="9" fill="#F6F5F2" stroke="#E5E7EB"/>
+      <rect x="461" y="34" width="194" height="88" rx="9" fill="#F6F5F2" stroke="#E5E7EB"/>
+      <text x="122" y="62" text-anchor="middle" font-size="12" fill="#1F2937">self-attention layers</text>
+      <text x="122" y="84" text-anchor="middle" font-size="10.5" font-style="italic" fill="#6B7280">nothing positional inside —</text>
+      <text x="122" y="99" text-anchor="middle" font-size="10.5" font-style="italic" fill="#6B7280">position was added at the input</text>
+      <text x="340" y="62" text-anchor="middle" font-size="12" fill="#1F2937">self-attention layers</text>
+      <text x="340" y="84" text-anchor="middle" font-size="10.5" font-style="italic" fill="#B45F06">relative-position scores</text>
+      <text x="340" y="99" text-anchor="middle" font-size="10.5" font-style="italic" fill="#B45F06">inside every layer</text>
+      <text x="558" y="62" text-anchor="middle" font-size="12" fill="#1F2937">self-attention layers</text>
+      <text x="558" y="84" text-anchor="middle" font-size="10.5" font-style="italic" fill="#B45F06">queries &amp; keys rotated</text>
+      <text x="558" y="99" text-anchor="middle" font-size="10.5" font-style="italic" fill="#B45F06">by position (RoPE)</text>
+    </g>
+    <!-- plus nodes and token boxes -->
+    <g>
+      <line x1="122" y1="151" x2="122" y2="128" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mKE)"/>
+      <line x1="340" y1="151" x2="340" y2="128" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mKE)"/>
+      <line x1="558" y1="151" x2="558" y2="128" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#mKE)"/>
+      <circle cx="122" cy="164" r="11" fill="#fff" stroke="#2E7D32" stroke-width="1.8"/>
+      <circle cx="340" cy="164" r="11" fill="#fff" stroke="#2E7D32" stroke-width="1.8"/>
+      <circle cx="558" cy="164" r="11" fill="#fff" stroke="#2E7D32" stroke-width="1.8"/>
+      <text x="122" y="169" text-anchor="middle" font-size="13" fill="#2E7D32">+</text>
+      <text x="340" y="169" text-anchor="middle" font-size="13" fill="#2E7D32">+</text>
+      <text x="558" y="169" text-anchor="middle" font-size="13" fill="#2E7D32">+</text>
+      <!-- absolute position feeds RoBERTa's input plus -->
+      <text x="66" y="150" text-anchor="middle" font-size="9.5" font-style="italic" fill="#B45F06">absolute position</text>
+      <path d="M66 155 C 80 165, 95 165, 108 164" stroke="#B45F06" stroke-width="1.6" fill="none" marker-end="url(#mOE)"/>
+      <rect x="62"  y="187" width="120" height="28" rx="7" fill="#374151"/>
+      <rect x="280" y="187" width="120" height="28" rx="7" fill="#374151"/>
+      <rect x="498" y="187" width="120" height="28" rx="7" fill="#374151"/>
+      <text x="122" y="205" text-anchor="middle" font-size="10.5" fill="#fff">token embedding</text>
+      <text x="340" y="205" text-anchor="middle" font-size="10.5" fill="#fff">token embedding</text>
+      <text x="558" y="205" text-anchor="middle" font-size="10.5" fill="#fff">token embedding</text>
+      <line x1="122" y1="187" x2="122" y2="179" stroke="#9CA3AF" stroke-width="1.6"/>
+      <line x1="340" y1="187" x2="340" y2="179" stroke="#9CA3AF" stroke-width="1.6"/>
+      <line x1="558" y1="187" x2="558" y2="179" stroke="#9CA3AF" stroke-width="1.6"/>
+    </g>
+    <!-- shared hexatag bar -->
+    <rect x="60" y="236" width="560" height="26" rx="8" fill="#1E4D38"/>
+    <text x="340" y="253" text-anchor="middle" font-size="11" fill="#fff">Hexatag prior &nbsp;E&#964; + E&#957; — the same 7·D tables in all three</text>
+    <path d="M122 236 L122 178" stroke="#2E7D32" stroke-width="1.8" stroke-dasharray="5 4" fill="none" marker-end="url(#mGE)"/>
+    <path d="M340 236 L340 178" stroke="#2E7D32" stroke-width="1.8" stroke-dasharray="5 4" fill="none" marker-end="url(#mGE)"/>
+    <path d="M558 236 L558 178" stroke="#2E7D32" stroke-width="1.8" stroke-dasharray="5 4" fill="none" marker-end="url(#mGE)"/>
+  </svg>
+  <div class="wcap">Input-pathway injection is one recipe, three times: the tag vectors join the
+  token embedding at the green ⊕, before the encoder runs. Each model’s own positional mechanism
+  (orange) is left exactly where it was — added at the input for RoBERTa, computed inside every
+  attention layer for DeBERTa-v3 and ModernBERT.</div>
+</div>
 
 <p><b>Decoders with relative PE (Transformer-XL):</b> the input pathway is the <em>weakest</em>
 option. Syntax helps progressively more as it entangles with position:
@@ -509,19 +636,27 @@ positional preference the model already has, rather than pushing on every pair u
 
 <h2 id="results">5. Results</h2>
 
-<p>Three claims, each with a figure.</p>
+<p>Three claims.</p>
 
-<p><b>First, the prior transfers downstream.</b> Fine-tuning the SiPE-pretrained models on GLUE
-(a standard suite of eight language-understanding tasks): the decoder gains <b>+8.2%
-relative</b> on the task average (68.17 → 73.78), with every individual task improving; the
-encoders gain consistently across all three positional-encoding families and both scales:</p>
+<p><b>First — and this is the result we would put on a billboard — the prior pays off on
+ordinary language understanding.</b> These are not grammar benchmarks: GLUE is a standard suite
+of eight everyday tasks (sentiment, paraphrase, entailment, similarity). Fine-tuning the
+SiPE-pretrained models on it, the decoder gains <b>+8.2% relative</b> on the task average
+(68.17 → 73.78) — and the gain is not an artifact of averaging. Broken out per task and per
+model, the decoder improves on <b>all eight</b> tasks, and every encoder improves on the
+majority, across all three positional-encoding families:</p>
 
 <figure>
-  <img src="assets/glue_all.png" alt="GLUE results: per-task Transformer-XL bars and macro-average dumbbells for all models">
-  <figcaption><b>GLUE across the whole model zoo.</b> Left: Transformer-XL per task, baseline vs.
-  the positional-pathway variant — the +12.5 on CoLA (judging whether a sentence is grammatical)
-  is exactly where a syntactic prior should help. Right: task averages for every model we
-  pretrain, baseline → best SiPE variant.</figcaption>
+  <img src="assets/glue_per_model.png" alt="Per-task GLUE dumbbells for Transformer-XL, RoBERTa, DeBERTa-v3, and ModernBERT">
+  <figcaption><b>GLUE, per task and per model</b> (baseline gray → best SiPE variant orange; gray
+  labels mark the few regressions). The decoder’s +12.5 on CoLA — judging whether a sentence is
+  grammatical — is exactly where a syntactic prior should help most.</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/glue_macro.png" alt="GLUE macro averages for all six model configurations">
+  <figcaption>The same story compressed to one line per model, now including the large-scale
+  variants: every model we pretrain improves on the GLUE average.</figcaption>
 </figure>
 
 <p><b>Second, simplest fusion wins</b> — the full version of the sweep from §3, now including
@@ -549,7 +684,7 @@ variants 45–48, against our baseline’s 18.63. SiPE’s multiplicative varian
 16.95 while matching or beating the parser-free methods on syntactic generalization — this is
 the Pareto scatter at the top of the post.</p>
 
-<h2 id="layers">6. Syntax wants to enter at layer one</h2>
+<h2 id="layers">6. Syntax in decoders is best injected at layer 1</h2>
 
 <p>A natural follow-up: which layers should receive the prior? We sweep contiguous layer suffixes
 of Transformer-XL — injecting into layers ℓ…16 for every choice of ℓ — and injecting from the
@@ -572,8 +707,13 @@ the baseline doesn’t, and measured how much attention the verb pays to its obj
 <figure>
   <img src="assets/attn_roberta.png" alt="RoBERTa verb-object attention comparison">
   <figcaption>RoBERTa-base vs. RoBERTa-base+SiPE: on examples only the SiPE model classifies
-  correctly, it places higher verb→object attention in <b>90%</b> of cases. ModernBERT mirrors
-  the pattern at 85% despite rotary PE.</figcaption>
+  correctly, it places higher verb→object attention in <b>90%</b> of cases.</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/attn_modernbert.png" alt="ModernBERT verb-object attention comparison">
+  <figcaption>ModernBERT-base mirrors the pattern — higher verb→object attention in <b>85%</b>
+  of cases — despite using rotary rather than absolute positional embeddings.</figcaption>
 </figure>
 
 <figure>
@@ -604,8 +744,9 @@ Embedding (RoPE).”</blockquote>
 implementation</a>, each token’s hidden state is projected into a small vector whose inner
 product with a learned per-distance embedding is added to the attention scores — a content ×
 position interaction of exactly the <b>BD</b> form from §2, computed with the same coefficients
-trick. A frontier lab independently concluded that this machinery is worth a trillion-parameter
-bet — the release that sent the community back to the 2018 papers.</p>
+trick. A frontier lab looked at the same design space and, independently, picked relative
+positional embeddings for a trillion-parameter model — the release that sent the community back
+to the 2018 papers.</p>
 
 <p>The two designs were built independently, at very different scales, and for different
 purposes — but they rhyme in ways worth spelling out:</p>
@@ -638,8 +779,8 @@ perplexity is conditioned on the single parse (that is the trade-off the Pareto 
 explicit).</p>
 
 <p class="note">🚧 <b>Code, hexatagged training data, and pretrained checkpoints will be released
-upon acceptance</b> — enough, we hope, for someone with more GPUs than us to try the
-multiplicative coupling at frontier scale. Watch
+upon acceptance</b> — enough, we hope, for someone with more GPUs than us to try SiPE at
+frontier scale. Watch
 <a href="https://github.com/hriaz17/SiPE">hriaz17/SiPE</a>.</p>
 
 <h2 id="citation">Citation</h2>
