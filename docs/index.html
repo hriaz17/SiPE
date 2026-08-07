@@ -206,7 +206,7 @@ frontier:</p>
   sentence — the number behind perplexity and behind these grammar tests. Joint syntactic LMs
   (TG, Pushdown LM, PLM) only define probabilities of (sentence, tree) <em>pairs</em>, so getting
   <i>p(x)</i> forces them to sum over ≈300 candidate trees per sentence. Parser-free methods
-  (TreeReg, TPT) score sentences directly but lose syntactic ability. SiPE conditions on a single
+  (TreeReg, TPT) score sentences directly but lose some syntactic performance. SiPE conditions on a single
   parse and keeps most of the benefit of full marginalization at 1/300th of its
   cost.</figcaption>
 </figure>
@@ -346,12 +346,16 @@ looks like differs between encoders and decoders:</p>
   model predicts the next token and the next tags together.</div>
 </div>
 
+<p>Putting the pieces together, here is an overview of the whole approach — how a dependency
+tree becomes hexatags, and how those tags join the model’s input and its training
+objective:</p>
+
 <figure>
   <img src="assets/method_diagram.png" alt="SiPE method diagram: hexatags from dependency arcs, injected via lookup tables">
-  <figcaption><b>Left:</b> dependency arcs → binary head tree → hexatags (left-shifted).
-  <b>Right:</b> the simplest injection, for absolute positional embeddings: each first subword
-  adds one row from each tag table to its embedding; three prediction heads recover the token and
-  both tags at masked positions.</figcaption>
+  <figcaption><b>Overview of the approach. Left:</b> dependency arcs → binary head tree →
+  hexatags (left-shifted). <b>Right:</b> the simplest injection, for absolute positional
+  embeddings: each first subword adds one row from each tag table to its embedding; three
+  prediction heads recover the token and both tags at masked positions.</figcaption>
 </figure>
 
 <h2 id="position">2. How position enters attention</h2>
@@ -662,10 +666,18 @@ families:</p>
   variants: every model we pretrain improves on the GLUE average.</figcaption>
 </figure>
 
-<p><b>Second, simplest fusion wins</b> — the full version of the sweep from §3, now including
-variants that use the fine-grained 40-label dependency-relation inventory instead of our two
-coarse tags. The richer signal from full dependency-relation labels does not help over the plain
-terminal and non-terminal tags:</p>
+<p><b>Second, simplest fusion wins.</b> Everywhere so far, the prior has been our two coarse
+tags per word. But a dependency parse offers more: every arc also carries a <em>relation
+label</em> — <code>nsubj</code>, <code>obj</code>, <code>oblique</code>, one of 40 in total
+(visible on the arcs of the dependency tree in the §1 overview figure). A natural what-if: would embedding that
+richer signal beat our two coarse tags? We ran the full sweep. A quick key to the variant names
+in the figures below: <b>ADD T+NT</b> is our default — add the <b>T</b>erminal and
+<b>N</b>on-<b>T</b>erminal tag embeddings to the input; variants with <b>DR</b> or <b>DNT</b>
+add the 40-label <b>d</b>ependency-<b>r</b>elation embedding on top of the tags or in place of
+the terminal tag; <b>CONCAT</b> variants concatenate the vectors and project back down instead
+of adding; <b>α</b> variants mix token and tags with a learned weight. The answer to the
+what-if is no — the richer signal does not help over the plain terminal and non-terminal
+tags:</p>
 
 <figure>
   <img src="assets/glue_avg.png" alt="Average GLUE across prior-injection variants">
