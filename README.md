@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hriaz17.github.io/SiPE/"><img src="https://img.shields.io/badge/🌐_Blog-SiPE-B45F06" alt="Blog"></a>
-  <a href="#citation"><img src="https://img.shields.io/badge/📖_Paper-Under_Review-2E7D32" alt="Paper"></a>
+  <a href="https://arxiv.org/abs/2608.06111"><img src="https://img.shields.io/badge/arXiv-2608.06111-b31b1b" alt="arXiv"></a>
   <img src="https://img.shields.io/badge/Code-Coming_Soon-lightgrey" alt="Code coming soon">
 </p>
 
@@ -38,10 +38,13 @@
 ## Citation
 
 ```bibtex
-@misc{riaz2026sipe,
-  title  = {Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers},
-  author = {Riaz, Haris and Kim, Hyungji and Surdeanu, Mihai},
-  year   = {2026},
-  note   = {Under review}
+@misc{riaz2026sequenceordersyntaxinformedpositional,
+      title={Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers},
+      author={Haris Riaz and Hyungji Kim and Mihai Surdeanu},
+      year={2026},
+      eprint={2608.06111},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2608.06111},
 }
 ```
